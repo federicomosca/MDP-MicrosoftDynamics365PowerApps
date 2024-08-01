@@ -409,111 +409,111 @@ if (typeof (RSMNG.FORMEDO.LESSON) == "undefined") {
         takenSeatsField ? !sessionMode ? formContext.getControl(fields.takenSeats).setVisible(false) : formContext.getControl(fields.takenSeats).setVisible(true) : null;
     }
     //---------------------------------------------------
-    _self.countAttendees = function (executionContext) {
-        var formContext = executionContext.getFormContext();
+    //_self.countAttendees = function (executionContext) {
+    //    var formContext = executionContext.getFormContext();
 
-        const gridContext = formContext.getControl("subgrid_attendances");
+    //    const gridContext = formContext.getControl("subgrid_attendances");
 
-        if (gridContext) {
-            let attendeesCount = gridContext.getGrid().getTotalRecordCount();
-            const attendeesField = formContext.getAttribute(fields.attendees);
+    //    if (gridContext) {
+    //        let attendeesCount = gridContext.getGrid().getTotalRecordCount();
+    //        const attendeesField = formContext.getAttribute(fields.attendees);
 
-            attendeesField ? attendeesField.setValue(attendeesCount) : null;
+    //        attendeesField ? attendeesField.setValue(attendeesCount) : null;
 
-            if (attendeesCount > 0) {
+    //        if (attendeesCount > 0) {
 
-                handleSeatsVisibility(formContext);
+    //            handleSeatsVisibility(formContext);
 
-                const classroomField = formContext.getAttribute(fields.classroom);
-                const availableSeatsField = formContext.getAttribute(fields.availableSeats);
-                const takenSeatsField = formContext.getAttribute(fields.takenSeats);
+    //            const classroomField = formContext.getAttribute(fields.classroom);
+    //            const availableSeatsField = formContext.getAttribute(fields.availableSeats);
+    //            const takenSeatsField = formContext.getAttribute(fields.takenSeats);
 
-                let classroomId = classroomField && classroomField.getValue() ? classroomField.getValue()[0].id : null;
+    //            let classroomId = classroomField && classroomField.getValue() ? classroomField.getValue()[0].id : null;
 
-                Xrm.WebApi.retrieveRecord("res_classroom", classroomId, "?$select=res_seats,res_name").then(
-                    function (classroom) {
-                        const classroomSeats = classroom.res_seats ?? 0;
+    //            Xrm.WebApi.retrieveRecord("res_classroom", classroomId, "?$select=res_seats,res_name").then(
+    //                function (classroom) {
+    //                    const classroomSeats = classroom.res_seats ?? 0;
 
-                        takenSeatsField ? takenSeatsField.setValue(attendeesCount) : null;
-                        let takenSeats = takenSeatsField && takenSeatsField.getValue() ? takenSeatsField.getValue() : 0;
+    //                    takenSeatsField ? takenSeatsField.setValue(attendeesCount) : null;
+    //                    let takenSeats = takenSeatsField && takenSeatsField.getValue() ? takenSeatsField.getValue() : 0;
 
-                        availableSeatsField ? availableSeatsField.setValue(classroomSeats - takenSeats) : null;
+    //                    availableSeatsField ? availableSeatsField.setValue(classroomSeats - takenSeats) : null;
 
-                        if (takenSeats > classroomSeats) {
+    //                    if (takenSeats > classroomSeats) {
 
-                            const code = formContext.getAttribute(fields.code) && formContext.getAttribute(fields.code).getValue() ? formContext.getAttribute(fields.code).getValue() : null;
-                            const lessonId = cleanId(formContext.data.entity.getId());
-                            const moduleId = formContext.getAttribute(fields.module) && formContext.getAttribute(fields.module).getValue() ? formContext.getAttribute(fields.module).getValue()[0].id : null;
-                            const courseId = formContext.getAttribute(fields.course) && formContext.getAttribute(fields.course).getValue() ? formContext.getAttribute(fields.course).getValue()[0].id : null;
-                            const referentId = formContext.getControl(fields.referent) && formContext.getControl(fields.referent).getAttribute().getValue() ? formContext.getControl(fields.referent).getAttribute().getValue()[0].id : null;
-                            const intendedDate = formContext.getAttribute(fields.intendedDate) && formContext.getAttribute(fields.intendedDate).getValue() ? formContext.getAttribute(fields.intendedDate).getValue() : null;
-                            const intendedStartingTime = formContext.getAttribute(fields.intendedStartingTime) && formContext.getAttribute(fields.intendedStartingTime).getValue() ? formContext.getAttribute(fields.intendedStartingTime).getValue() : null;
-                            const intendedEndingTime = formContext.getAttribute(fields.intendedEndingTime) && formContext.getAttribute(fields.intendedEndingTime).getValue() ? formContext.getAttribute(fields.intendedEndingTime).getValue() : null;
-                            const intendedBreak = formContext.getAttribute(fields.intendedBreak) && formContext.getAttribute(fields.intendedBreak).getValue() ? formContext.getAttribute(fields.intendedBreak).getValue() : null;
-                            const intendedLessonDuration = formContext.getAttribute(fields.intendedLessonDuration) && formContext.getAttribute(fields.intendedLessonDuration).getValue() ? formContext.getAttribute(fields.intendedLessonDuration).getValue() : null;
-                            const intendedBookingDuration = formContext.getAttribute(fields.intendedBookingDuration) && formContext.getAttribute(fields.intendedBookingDuration).getValue() ? formContext.getAttribute(fields.intendedBookingDuration).getValue() : null;
+    //                        const code = formContext.getAttribute(fields.code) && formContext.getAttribute(fields.code).getValue() ? formContext.getAttribute(fields.code).getValue() : null;
+    //                        const lessonId = cleanId(formContext.data.entity.getId());
+    //                        const moduleId = formContext.getAttribute(fields.module) && formContext.getAttribute(fields.module).getValue() ? formContext.getAttribute(fields.module).getValue()[0].id : null;
+    //                        const courseId = formContext.getAttribute(fields.course) && formContext.getAttribute(fields.course).getValue() ? formContext.getAttribute(fields.course).getValue()[0].id : null;
+    //                        const referentId = formContext.getControl(fields.referent) && formContext.getControl(fields.referent).getAttribute().getValue() ? formContext.getControl(fields.referent).getAttribute().getValue()[0].id : null;
+    //                        const intendedDate = formContext.getAttribute(fields.intendedDate) && formContext.getAttribute(fields.intendedDate).getValue() ? formContext.getAttribute(fields.intendedDate).getValue() : null;
+    //                        const intendedStartingTime = formContext.getAttribute(fields.intendedStartingTime) && formContext.getAttribute(fields.intendedStartingTime).getValue() ? formContext.getAttribute(fields.intendedStartingTime).getValue() : null;
+    //                        const intendedEndingTime = formContext.getAttribute(fields.intendedEndingTime) && formContext.getAttribute(fields.intendedEndingTime).getValue() ? formContext.getAttribute(fields.intendedEndingTime).getValue() : null;
+    //                        const intendedBreak = formContext.getAttribute(fields.intendedBreak) && formContext.getAttribute(fields.intendedBreak).getValue() ? formContext.getAttribute(fields.intendedBreak).getValue() : null;
+    //                        const intendedLessonDuration = formContext.getAttribute(fields.intendedLessonDuration) && formContext.getAttribute(fields.intendedLessonDuration).getValue() ? formContext.getAttribute(fields.intendedLessonDuration).getValue() : null;
+    //                        const intendedBookingDuration = formContext.getAttribute(fields.intendedBookingDuration) && formContext.getAttribute(fields.intendedBookingDuration).getValue() ? formContext.getAttribute(fields.intendedBookingDuration).getValue() : null;
 
-                            console.log(code);
-                            console.log(referentId);
+    //                        console.log(code);
+    //                        console.log(referentId);
 
-                            let json = {
-                                Code: code,
-                                ClassroomSeats: classroomSeats,
-                                TakenSeats: takenSeats,
-                                LessonId: lessonId,
-                                ModuleId: moduleId,
-                                CourseId: courseId,
-                                ReferentId: referentId,
-                                IntendedDate: toLocalISOString(intendedDate),
-                                IntendedStartingTime: intendedStartingTime,
-                                IntendedEndingTime: intendedEndingTime,
-                                IntendedBreak: intendedBreak,
-                                IntendedLessonDuration: intendedLessonDuration,
-                                IntendedBookingDuration: intendedBookingDuration
-                            };
+    //                        let json = {
+    //                            Code: code,
+    //                            ClassroomSeats: classroomSeats,
+    //                            TakenSeats: takenSeats,
+    //                            LessonId: lessonId,
+    //                            ModuleId: moduleId,
+    //                            CourseId: courseId,
+    //                            ReferentId: referentId,
+    //                            IntendedDate: toLocalISOString(intendedDate),
+    //                            IntendedStartingTime: intendedStartingTime,
+    //                            IntendedEndingTime: intendedEndingTime,
+    //                            IntendedBreak: intendedBreak,
+    //                            IntendedLessonDuration: intendedLessonDuration,
+    //                            IntendedBookingDuration: intendedBookingDuration
+    //                        };
 
-                            // Parameters
-                            var parameters = {};
-                            parameters.jsonDataInput = JSON.stringify(json) // Edm.String
-                            parameters.actionName = 'HANDLE_ATTENDEES_SURPLUS'; // Edm.String
+    //                        // Parameters
+    //                        var parameters = {};
+    //                        parameters.jsonDataInput = JSON.stringify(json) // Edm.String
+    //                        parameters.actionName = 'HANDLE_ATTENDEES_SURPLUS'; // Edm.String
 
-                            fetch(Xrm.Utility.getGlobalContext().getClientUrl() + "/api/data/v9.2/res_ClientAction", {
-                                method: "POST",
-                                headers: {
-                                    "OData-MaxVersion": "4.0",
-                                    "OData-Version": "4.0",
-                                    "Content-Type": "application/json; charset=utf-8",
-                                    "Accept": "application/json"
-                                },
-                                body: JSON.stringify(parameters)
-                            }).then(
-                                function success(response) {
-                                    return response.json().then((json) => { if (response.ok) { return [response, json]; } else { throw json.error; } });
-                                }
-                            ).then(function (responseObjects) {
-                                var response = responseObjects[0];
-                                var responseBody = responseObjects[1];
-                                var result = responseBody;
-                                console.log(result);
-                                // Return Type: mscrm.res_ClientActionResponse
-                                // Output Parameters
-                                var jsondataoutput = result["jsonDataOutput"]; // Edm.String
+    //                        fetch(Xrm.Utility.getGlobalContext().getClientUrl() + "/api/data/v9.2/res_ClientAction", {
+    //                            method: "POST",
+    //                            headers: {
+    //                                "OData-MaxVersion": "4.0",
+    //                                "OData-Version": "4.0",
+    //                                "Content-Type": "application/json; charset=utf-8",
+    //                                "Accept": "application/json"
+    //                            },
+    //                            body: JSON.stringify(parameters)
+    //                        }).then(
+    //                            function success(response) {
+    //                                return response.json().then((json) => { if (response.ok) { return [response, json]; } else { throw json.error; } });
+    //                            }
+    //                        ).then(function (responseObjects) {
+    //                            var response = responseObjects[0];
+    //                            var responseBody = responseObjects[1];
+    //                            var result = responseBody;
+    //                            console.log(result);
+    //                            // Return Type: mscrm.res_ClientActionResponse
+    //                            // Output Parameters
+    //                            var jsondataoutput = result["jsonDataOutput"]; // Edm.String
 
 
-                            }).catch(function (error) {
-                                console.log(error.message);
-                            });
-                        }
-                    },
-                    function (error) { console.log(error.message); }
-                );
-            } else {
-                formContext.getControl(fields.takenSeats).setVisible(false)
-            }
-        } else {
-            console.log("Subgrid non trovata.");
-        }
-    }
+    //                        }).catch(function (error) {
+    //                            console.log(error.message);
+    //                        });
+    //                    }
+    //                },
+    //                function (error) { console.log(error.message); }
+    //            );
+    //        } else {
+    //            formContext.getControl(fields.takenSeats).setVisible(false)
+    //        }
+    //    } else {
+    //        console.log("Subgrid non trovata.");
+    //    }
+    ////}
     //---------------------------------------------------
 
     /* 
@@ -532,7 +532,7 @@ if (typeof (RSMNG.FORMEDO.LESSON) == "undefined") {
         formContext.data.entity.addOnSave(_self.onSaveForm);
 
         handleSeatsVisibility(formContext);
-        _self.countAttendees(executionContext);
+        //_self.countAttendees(executionContext);
 
         formContext.getAttribute(fields.sessionMode).addOnChange(_self.onChangeSessionMode);
         formContext.getAttribute(fields.classroom).addOnChange(_self.onChangeClassroom);
@@ -542,8 +542,8 @@ if (typeof (RSMNG.FORMEDO.LESSON) == "undefined") {
         formContext.getAttribute(fields.intendedEndingTime).addOnChange(_self.onChangeBookingTime);
         formContext.getAttribute(fields.intendedBreak).addOnChange(_self.onChangeBookingTime);
 
-        const gridContext = formContext.getControl("subgrid_attendances");
-        gridContext ? gridContext.addOnLoad(_self.countAttendees) : console.log("cannot access grid context");
+        //const gridContext = formContext.getControl("subgrid_attendances");
+        //gridContext ? gridContext.addOnLoad(_self.countAttendees) : console.log("cannot access grid context");
 
 
 

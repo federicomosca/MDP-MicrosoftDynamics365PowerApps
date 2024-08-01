@@ -30,6 +30,8 @@ namespace RSMNG.FORMEDO.ATTENDANCE
                 IOrganizationService service = serviceFactory.CreateOrganizationService(context.UserId);
                 try
                 {
+                    tracingService.Trace("non mi rompo fin qui");
+
                     Utils.CheckMandatoryFieldsOnCreate(UtilsAttendance.mandatoryFields, target);
 
                     EntityReference erLesson = target.GetAttributeValue<EntityReference>("res_classroombooking");
@@ -43,17 +45,23 @@ namespace RSMNG.FORMEDO.ATTENDANCE
                     int classroomSeats = classroom.GetAttributeValue<int>("res_seats");
 
                     #region AGGIORNO NELLA LEZIONE IL NUMERO DI POSTI DISPONIBILI E PARTECIPANTI
+                    tracingService.Trace("non mi rompo fin qui");
 
-                    int attendees = lesson["res_attendees"] != null ? lesson.GetAttributeValue<int>("res_attendees") : 0;
-                    int availableSeats = lesson["res_availableseats"] != null ? lesson.GetAttributeValue<int>("res_availableseats") : 0;
-                    int takenSeats = lesson["res_takenseats"] != null ? lesson.GetAttributeValue<int>("res_takenseats") : 0;
+                    int attendees = lesson.GetAttributeValue<int?>("res_attendees") ?? 0;
+                    int availableSeats = lesson.GetAttributeValue<int?>("res_availableseats") ?? 0;
+                    int takenSeats = lesson.GetAttributeValue<int?>("res_takenseats") ?? 0;
 
-                    if (!(takenSeats > classroomSeats))
+                    if (takenSeats < classroomSeats)
                     {
-                        takenSeats++;
-                        availableSeats = classroomSeats - takenSeats;
+                        tracingService.Trace("non mi rompo fin qui");
+
+                        lesson["res_takenseats"] = takenSeats++;
+                        lesson["res_availableseats"] = classroomSeats - takenSeats;
                     }
-                        lesson["res_attendees"] = attendees + 1;
+
+                    lesson["res_attendees"] = attendees + 1;
+                    tracingService.Trace("non mi rompo fin qui");
+                    service.Update(lesson);
                     #endregion
                 }
                 catch (FaultException<OrganizationServiceFault> ex)

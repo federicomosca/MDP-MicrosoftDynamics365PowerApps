@@ -44,9 +44,9 @@ namespace RSMNG.FORMEDO.ATTENDANCE
                     Entity classroom = service.Retrieve("res_classroom", erClassroom.Id, new ColumnSet("res_seats"));
 
                     int classroomSeats = classroom.GetAttributeValue<int>("res_seats");
-                    int attendees = lesson["res_attendees"] != null ? lesson.GetAttributeValue<int>("res_attendees") : 0;
-                    int availableSeats = lesson["res_availableseats"] != null ? lesson.GetAttributeValue<int>("res_availableseats") : 0;
-                    int takenSeats = lesson["res_takenseats"] != null ? lesson.GetAttributeValue<int>("res_takenseats") : 0;
+                    int attendees = lesson.GetAttributeValue<int?>("res_attendees") ?? 0;
+                    int availableSeats = lesson.GetAttributeValue<int?>("res_availableseats") ?? 0;
+                    int takenSeats = lesson.GetAttributeValue<int?>("res_takenseats") ?? 0;
 
                     #region GENERO IL CODICE
                     string[] codeSegments = new string[2];
@@ -58,20 +58,21 @@ namespace RSMNG.FORMEDO.ATTENDANCE
 
                     #region DETERMINO LA MODALITÀ DI PARTECIPAZIONE DEGLI ISCRITTI ALLA LEZIONE
                     bool isMandatoryInPerson = lesson.Contains("res_inpersonparticipation") ? lesson.GetAttributeValue<bool>("res_inpersonparticipation") : false;
+
                     //se ci sono ancora posti e la presenza è obbligatoria
-                    if (takenSeats < classroomSeats && isMandatoryInPerson)
-                    {
-                        //allora di default l'iscritto partecipa in presenza
-                        target["res_participationmode"] = true;
-                    }
-                    else
-                    {
-                        Url remoteParticipationUrl = new Url("https://teams.microsoft.com/l/meetup-join/19%3ameeting_XYZ1234567890%40thread.v2/0\r\n");
-                        lesson["res_remoteparticipationurl"] = remoteParticipationUrl;
-                        service.Update(lesson);
-                        //se non ci sono più posti oppure ci sono ma la presenza è facoltativa, di default l'iscritto partecipa da remoto
-                        target["res_participationmode"] = false;
-                    }
+                    //if (takenSeats < classroomSeats && isMandatoryInPerson)
+                    //{
+                    //    //allora di default l'iscritto partecipa in presenza
+                    //    target["res_participationmode"] = true;
+                    //}
+                    //else
+                    //{
+                    //    Url remoteParticipationUrl = new Url("https://teams.microsoft.com/l/meetup-join/19%3ameeting_XYZ1234567890%40thread.v2/0\r\n");
+                    //    lesson["res_remoteparticipationurl"] = remoteParticipationUrl;
+                    //    service.Update(lesson);
+                    //    //se non ci sono più posti oppure ci sono ma la presenza è facoltativa, di default l'iscritto partecipa da remoto
+                    //    target["res_participationmode"] = false;
+                    //}
                     #endregion
                 }
                 catch (FaultException<OrganizationServiceFault> ex)
