@@ -1,4 +1,4 @@
-﻿using FORMEDO.LESSON;
+﻿using RSMNG.FORMEDO.LESSON;
 using FORMEDO.UTILS;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;

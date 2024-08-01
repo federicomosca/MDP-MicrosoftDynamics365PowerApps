@@ -1,8 +1,4 @@
-﻿using FORMEDO;
-using FORMEDO.UTILS;
-using RSMNG.FORMEDO.LESSON;
-using Microsoft.Xrm.Sdk;
-using Microsoft.Xrm.Sdk.Query;
+﻿using Microsoft.Xrm.Sdk;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace RSMNG.FORMEDO.LESSON
 {
-    public class PreUpdate : IPlugin
+    public class PostUpdate : IPlugin
     {
         public void Execute(IServiceProvider serviceProvider)
         {
@@ -32,23 +28,9 @@ namespace RSMNG.FORMEDO.LESSON
                 IOrganizationService service = serviceFactory.CreateOrganizationService(context.UserId);
                 try
                 {
-                    Utils.CheckMandatoryFieldsOnUpdate(UtilsLesson.mandatoryFields, target);
-
-                    string[] codeSegments = new string[3];
-
-                    EntityReference erClassroom = Utils.GetAttributeFromTargetOrPreImage<EntityReference>("res_classroomid", target, preImage);
-                    Entity classroom = service.Retrieve("res_classroom", erClassroom.Id, new ColumnSet("res_name"));
-                    codeSegments[0] = classroom["res_name"] != null ? classroom.GetAttributeValue<string>("res_name") + " - " : string.Empty;
-
-                    EntityReference erModule = Utils.GetAttributeFromTargetOrPreImage<EntityReference>("res_moduleid", target, preImage);
-                    Entity module = service.Retrieve("res_module", erModule.Id, new ColumnSet("res_title"));
-                    codeSegments[1] = module["res_title"] != null ? module.GetAttributeValue<string>("res_title") + " - " : string.Empty;
-
-                    DateTime date = Utils.GetAttributeFromTargetOrPreImage<DateTime>("res_intendeddate", target, preImage);
-                    codeSegments[2] = date.ToString("dd-MM-yyyy");
-
-                    tracingService.Trace(UtilsLesson.GenerateCode(codeSegments));
-                    target["res_code"] = UtilsLesson.GenerateCode(codeSegments);
+                    /**
+                     * se modifico data o orari della lezione, devo aggiornare gli stessi campi nelle presenze
+                     */
                 }
                 catch (FaultException<OrganizationServiceFault> ex)
                 {
@@ -56,16 +38,13 @@ namespace RSMNG.FORMEDO.LESSON
                 }
                 catch (ApplicationException ex)
                 {
-                    tracingService.Trace("ApplicationException: {0}", ex.ToString());
                     throw new InvalidPluginExecutionException(ex.Message);
                 }
                 catch (Exception ex)
                 {
-                    tracingService.Trace("FollowUpPlugin: {0}", ex.ToString());
                     throw ex;
                 }
             }
         }
-
     }
 }

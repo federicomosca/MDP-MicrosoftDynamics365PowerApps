@@ -172,6 +172,7 @@
     <Compile Include="attendance\PreCreate.cs" />
     <Compile Include="attendance\UtilsAttendance.cs" />
     <Compile Include="ClientAction.cs" />
+    <Compile Include="lesson\PostUpdate.cs" />
     <Compile Include="lesson\UtilsLesson.cs" />
     <Compile Include="lesson\PreUpdate.cs" />
     <Compile Include="lesson\PreCreate.cs" />
