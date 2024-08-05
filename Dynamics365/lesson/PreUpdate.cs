@@ -35,7 +35,7 @@ namespace FM.PAP.LESSON
 
                     string[] codeSegments = new string[3];
 
-                    EntityReference erClassroom = target.Contains("res_classroomid") && target.GetAttributeValue<EntityReference>("res_classroomid") != null ? target.GetAttributeValue<EntityReference>("res_classroomid") : null;
+                    EntityReference erClassroom = Utils.GetAttributeFromTargetOrPreImage<EntityReference>("res_classroomid", target, preImage);
                     Entity classroom = erClassroom != null ? service.Retrieve("res_classroom", erClassroom.Id, new ColumnSet("res_name")) : null;
                     codeSegments[0] = classroom != null && classroom["res_name"] != null ? classroom.GetAttributeValue<string>("res_name") + " - " : "Da Remoto - ";
 

@@ -421,7 +421,6 @@ if (typeof (FM.PAP.LESSON) == "undefined") {
                     var response = responseObjects[0];
                     var responseBody = responseObjects[1];
                     var result = responseBody;
-                    console.log(result);
                     // Return Type: mscrm.res_ClientActionResponse
                     // Output Parameters
                     var jsondataoutput = result["jsonDataOutput"]; // Edm.String

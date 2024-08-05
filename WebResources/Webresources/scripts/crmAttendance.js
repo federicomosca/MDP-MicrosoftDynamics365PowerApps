@@ -33,7 +33,8 @@ if (typeof (FM.PAP.ATTENDANCE) == "undefined") {
             date: "res_date",
             startingTime: "res_startingtime",
             endingTime: "res_endingtime",
-            signature: "res_signature"
+            signature: "res_signature",
+            participationMode: "res_participationmode"
         },
         tabs: {},
         sections: {}
@@ -86,6 +87,86 @@ if (typeof (FM.PAP.ATTENDANCE) == "undefined") {
         }
     };
 
+    _self.checkAvailableParticipationMode = executionContext => {
+        let formContext = executionContext.getFormContext();
+
+        const lessonId = formContext.getAttribute(fields.lesson).getValue()[0].id;
+        const participationModeControl = formContext.getControl(fields.participationMode);
+        let classroomSeats;
+        let sessionMode;
+        let isInPersonMandatory;
+
+        /**
+         * recupero la lezione legata alla presenza, dalla lezione recupero l'aula
+         * dell'aula vedo quanti sono i posti
+         */
+        if (lessonId) {
+            Xrm.WebApi.retrieveRecord("res_classroombooking", lessonId, "?$select=_res_classroomid_value, res_sessionmode, res_inpersonparticipation").then(
+                lesson => {
+                    sessionMode = lesson["res_sessionmode"];
+                    isInPersonMandatory = lesson["res_inpersonparticipation"];
+                    const classroomId = lesson._res_classroomid_value;
+
+                    Xrm.WebApi.retrieveRecord("res_classroom", classroomId, "?$select=res_seats").then(
+                        classroom => {
+                            classroomSeats = classroom.res_seats;
+                            /**
+                             * recupero il numero di iscritti alla lezione attivi e in presenza
+                             */
+                            var fetchXml = [
+                                "?fetchXml=<fetch returntotalrecordcount='true'>",
+                                "  <entity name='res_attendance'>",
+                                "    <filter>",
+                                "      <condition attribute='res_classroombooking' operator='eq' value='", lessonId, "'/>",
+                                "      <condition attribute='res_participationmode' operator='eq' value='1'/>",
+                                "      <condition attribute='statecode' operator='eq' value='0'/>",
+                                "    </filter>",
+                                "  </entity>",
+                                "</fetch>"
+                            ].join("");
+
+                            Xrm.WebApi.retrieveMultipleRecords("res_attendance", fetchXml).then(
+                                results => {
+                                    console.log('n. iscritti: ' + results.entities.length);
+                                    console.log('n. posti a sedere ' + classroomSeats);
+                                    /**
+                                     * se il numero di iscritti in presenza supera il numero di posti dell'aula
+                                     * tutti i nuovi iscritti vedranno solo "da remoto" nell'option set
+                                     * altrimenti controllo la sessionMode dell'aula e se è in presenza controllo la partecipazione in presenza se`è obbligatoria
+                                     * in quest'ultimo caso i nuovi iscritti vedranno solo "da remoto"
+                                     */
+                                    if (results.entities.length = classroomSeats) {
+                                        console.log("ci sono più iscritti in presenza che posti in aula");
+                                        participationModeControl.setVisible(false);
+                                    } else {
+                                        if (sessionMode === true && isInPersonMandatory === true) {
+                                            console.log('la lezione è erogata in presenza e con obbligo di partecipazione dal vivo');
+                                            participationModeControl.setVisible(true);
+                                            formContext.getAttribute(fields.participationMode).setValue(true);
+
+                                        } else {
+                                            console.log('la lezione è da remoto o con partecipazione dal vivo facoltativa');
+                                            participationModeControl.setVisible(true);
+                                            formContext.getAttribute(fields.participationMode).setValue(true);
+                                        }
+                                    }
+                                },
+                                error => { console.log(error.message); }
+                            );
+                        },
+                        noClassroom => {
+                            sessionMode = false;
+                        }
+                    );
+                },
+                error => { console.log(error.message); }
+            );
+
+        } else {
+            console.log('Lesson not found.');
+        }
+    }
+
     _self.onLoadForm = async function (executionContext) {
         await import('../res_scripts/Utils.js');
 
@@ -96,6 +177,7 @@ if (typeof (FM.PAP.ATTENDANCE) == "undefined") {
 
         // Init functions
         _self.fillLessonFields(executionContext);
+        _self.checkAvailableParticipationMode(executionContext);
 
         switch (formContext.ui.getFormType()) {
             case CREATE_FORM:
