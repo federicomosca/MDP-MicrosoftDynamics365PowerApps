@@ -50,8 +50,9 @@ namespace FM.PAP.CLIENTACTION
                     case "FILTER_BOOKING_DATE":
                         jsonDataOutput = FilterBookingDate(tracingService, service, jsonDataInput);
                         break;
-                    case "HANDLE_ATTENDEES_SURPLUS":
-                        jsonDataOutput = HandleAttendeesSurplus(tracingService, service, jsonDataInput);
+
+                    case "COUNT_ATTENDEES":
+                        jsonDataOutput = CountAttendees(tracingService, service, jsonDataInput);
                         break;
                 }
 
@@ -426,144 +427,167 @@ namespace FM.PAP.CLIENTACTION
 
         public string HandleAttendeesSurplus(ITracingService tracingService, IOrganizationService service, string jsonDataInput)
         {
-            Lesson inputLesson = JsonConvert.DeserializeObject<Lesson>(jsonDataInput);
+            //    Lesson inputLesson = JsonConvert.DeserializeObject<Lesson>(jsonDataInput);
 
-            string code = inputLesson.Code;
-            int classroomSeats = inputLesson.ClassroomSeats;
-            int takenSeats = inputLesson.TakenSeats;
-            Guid? lessonId = inputLesson.LessonId;
-            Guid? moduleId = inputLesson.ModuleId;
-            Guid? courseId = inputLesson.CourseId;
-            Guid? referentId = inputLesson.ReferentId;
+            //    string code = inputLesson.Code;
+            //    int classroomSeats = inputLesson.ClassroomSeats;
+            //    int takenSeats = inputLesson.TakenSeats;
+            //    Guid? lessonId = inputLesson.LessonId;
+            //    Guid? moduleId = inputLesson.ModuleId;
+            //    Guid? courseId = inputLesson.CourseId;
+            //    Guid? referentId = inputLesson.ReferentId;
 
-            DateTime? intendedDate = null;
-            if (!string.IsNullOrEmpty(inputLesson.IntendedDate))
+            //    DateTime? intendedDate = null;
+            //    if (!string.IsNullOrEmpty(inputLesson.IntendedDate))
+            //    {
+            //        DateTime.TryParse(inputLesson.IntendedDate, out DateTime parsedDate);
+            //        intendedDate = parsedDate;
+            //    }
+
+            //    string intendedStartingTime = inputLesson.IntendedStartingTime;
+            //    string intendedEndingTime = inputLesson.IntendedEndingTime;
+            //    string intendedBreak = inputLesson.IntendedBreak;
+            //    Decimal intendedLessonDuration = inputLesson.IntendedLessonDuration;
+            //    Decimal intendedBookingDuration = inputLesson.IntendedBookingDuration;
+
+            //    /**
+            //     * se il numero di posti occupati supera il numero di posti disponibili per quell'aula
+            //     * creo una nuova prenotazione con gli stessi dati della prima
+            //     * eccezion fatta per Aula e Modalità che saranno settate rispettivamente su
+            //     * una delle aule virtuali (la prima disponibile) e "in remoto"
+            //     */
+            //    if (takenSeats > classroomSeats)
+            //    {
+            //        Entity enRemoteLesson = new Entity("res_classroombooking");
+            //        Guid remoteLessonId = service.Create(enRemoteLesson);
+
+            //        Entity remoteLesson = new Entity("res_classroombooking", remoteLessonId);
+
+            //        if (moduleId.HasValue) remoteLesson["res_moduleid"] = new EntityReference("res_module", moduleId.Value);
+            //        if (courseId.HasValue) remoteLesson["res_courseid"] = new EntityReference("res_course", courseId.Value);
+            //        if (referentId.HasValue) remoteLesson["res_referent"] = new EntityReference("res_staff", referentId.Value);
+            //        if (intendedDate.HasValue) remoteLesson["res_intendeddate"] = intendedDate.Value;
+            //        if (!string.IsNullOrEmpty(intendedStartingTime)) remoteLesson["res_intendedstartingtime"] = intendedStartingTime;
+            //        if (!string.IsNullOrEmpty(intendedEndingTime)) remoteLesson["res_intendedendingtime"] = intendedEndingTime;
+            //        if (!string.IsNullOrEmpty(intendedBreak)) remoteLesson["res_intendedbreak"] = intendedBreak;
+            //        if (intendedLessonDuration != 0) remoteLesson["res_intendedlessonduration"] = intendedLessonDuration;
+            //        if (intendedBookingDuration != 0) remoteLesson["res_intendedbookingduration"] = intendedBookingDuration;
+            //        remoteLesson["res_sessionmode"] = false;
+            //        remoteLesson["res_availableseats"] = null;
+            //        remoteLesson["res_takenseats"] = null;
+            //        remoteLesson["res_attendees"] = null;
+
+            //        /*
+            //         * recupero tutte le aule virtuali
+            //         * le filtro e seleziono la prima di quelle che non hanno una relazione con la lezione nella data prevista scelta
+            //         */
+            //        var fetchVirtualClassroom = $@"<?xml version=""1.0"" encoding=""utf-16""?>
+            //                            <fetch top=""1"">
+            //                                <entity name=""res_classroom"">
+            //                                <attribute name=""res_classroomid"" />
+            //                                <attribute name=""res_name"" />
+            //                                <filter>
+            //                                    <condition attribute=""statecode"" operator=""eq"" value=""0"" />
+            //                                    <condition attribute=""res_type"" operator=""eq"" value=""0"" />
+            //                                </filter>
+            //                                <link-entity name=""res_classroombooking"" from=""res_classroomid"" to=""res_classroomid"" link-type=""not any"" alias=""linkedLesson"">
+            //                                    <filter>
+            //                                    <condition attribute=""statecode"" operator=""eq"" value=""0"" />
+            //                                    <condition attribute=""res_intendeddate"" operator=""eq"" value=""{intendedDate}"" />
+            //                                    </filter>
+            //                                </link-entity>
+            //                                </entity>
+            //                            </fetch>";
+
+            //        EntityCollection virtualClassrooms = service.RetrieveMultiple(new FetchExpression(fetchVirtualClassroom));
+            //        if (virtualClassrooms.Entities.Count > 0)
+            //        {
+            //            Entity entity = virtualClassrooms.Entities[0];
+
+            //            if (entity.Contains("res_classroomid"))
+            //            {
+            //                Guid classroomId = entity.GetAttributeValue<Guid>("res_classroomid");
+            //                remoteLesson["res_classroomid"] = new EntityReference("res_classroom", classroomId);
+            //                if (entity.Contains("res_name"))
+            //                {
+            //                    string classroomName = entity.GetAttributeValue<string>("res_name");
+            //                    if (!string.IsNullOrEmpty(code)) remoteLesson["res_code"] = $"{code} (Remote, Moved To: {classroomName})";
+            //                } else
+            //                {
+            //                    if (!string.IsNullOrEmpty(code)) remoteLesson["res_code"] = $"{code} (Remote, Moved To: {null})";
+            //                }
+            //            }
+            //            else
+            //            {
+            //                //SE NON NE TROVA UNA, LA CREA
+            //                tracingService.Trace("No virtual classroom found.");
+            //            }
+
+            //        }
+
+            //        /**
+            //         * dopo aver creato il record in questione
+            //         * recupero dal db gli iscritti alla prima lezione
+            //         * ordinati per data di creazione (del record di relazione) discendente
+            //         * seleziono tanti record, a partire dal primo, quanti sono gli iscritti "in surplus"
+            //         * elimino l'associazione con la prima lezione e li associo alla nuova lezione in modalità "da remoto"
+            //         */
+            //        int attendeesSurplus = takenSeats - classroomSeats;
+            //        var fetchAttendees = $@"<?xml version=""1.0"" encoding=""utf-16""?>
+            //                    <fetch top=""{attendeesSurplus}"">
+            //                      <entity name=""res_attendance"">
+            //                        <filter>
+            //                          <condition attribute=""res_classroombooking"" operator=""eq"" value=""{lessonId}"" />
+            //                        </filter>
+            //                        <order attribute=""createdon"" descending=""true"" />
+            //                      </entity>
+            //                    </fetch>";
+
+            //        EntityCollection attendees = service.RetrieveMultiple(new FetchExpression(fetchAttendees));
+
+            //        if (attendees.Entities.Count > 0)
+            //        {
+            //            foreach (Entity attendee in attendees.Entities)
+            //            {
+            //                attendee.Attributes.Remove("res_classroombooking");
+            //                attendee.Attributes.Add("res_classroombooking", new EntityReference("res_classroombooking", remoteLessonId));
+
+            //                service.Update(attendee);
+            //            }
+            //        }
+
+            //        service.Update(remoteLesson);
+            //        /**
+            //         * con power automate invio una mail agli iscritti in questione 
+            //         * per notificargli che i posti in aula sono esauriti e che dovranno assistere da remoto
+            //         * tramite il link che verrà generato
+            //         *              */
+            //    }
+
+            //    return "Il numero degli iscritti ha superato il numero dei posti disponibili. Gli ultimi iscritti dopo il superamento del limite riceveranno un link per assistere da remoto
+            return "";
+        }
+
+        public string CountAttendees(ITracingService tracingService, IOrganizationService service, string jsonDataInput)
+        {
+            Guid lessonId = new Guid(JsonConvert.DeserializeObject<string>(jsonDataInput));
+            ColumnSet lessonColumnSet = new ColumnSet("res_attendees", "res_remoteattendees", "res_availableseats", "res_takenseats");
+            Entity lesson = service.Retrieve("res_classroombooking", lessonId, lessonColumnSet);
+
+            int attendees = lesson.GetAttributeValue<int?>("res_attendees") ?? 0;
+            int remoteAttendees = lesson.GetAttributeValue<int?>("res_remoteattendees") ?? 0;
+            int availableSeats = lesson.GetAttributeValue<int?>("res_availableseats") ?? 0;
+            int takenSeats = lesson.GetAttributeValue<int?>("res_takenseats") ?? 0;
+
+            UpdatedAttendees updates = new UpdatedAttendees
             {
-                DateTime.TryParse(inputLesson.IntendedDate, out DateTime parsedDate);
-                intendedDate = parsedDate;
-            }
+                Attendees = attendees,
+                RemoteAttendees = remoteAttendees,
+                TakenSeats = takenSeats,
+                AvailableSeats = availableSeats
+            };
 
-            string intendedStartingTime = inputLesson.IntendedStartingTime;
-            string intendedEndingTime = inputLesson.IntendedEndingTime;
-            string intendedBreak = inputLesson.IntendedBreak;
-            Decimal intendedLessonDuration = inputLesson.IntendedLessonDuration;
-            Decimal intendedBookingDuration = inputLesson.IntendedBookingDuration;
-
-            /**
-             * se il numero di posti occupati supera il numero di posti disponibili per quell'aula
-             * creo una nuova prenotazione con gli stessi dati della prima
-             * eccezion fatta per Aula e Modalità che saranno settate rispettivamente su
-             * una delle aule virtuali (la prima disponibile) e "in remoto"
-             */
-            if (takenSeats > classroomSeats)
-            {
-                Entity enRemoteLesson = new Entity("res_classroombooking");
-                Guid remoteLessonId = service.Create(enRemoteLesson);
-
-                Entity remoteLesson = new Entity("res_classroombooking", remoteLessonId);
-
-                if (moduleId.HasValue) remoteLesson["res_moduleid"] = new EntityReference("res_module", moduleId.Value);
-                if (courseId.HasValue) remoteLesson["res_courseid"] = new EntityReference("res_course", courseId.Value);
-                if (referentId.HasValue) remoteLesson["res_referent"] = new EntityReference("res_staff", referentId.Value);
-                if (intendedDate.HasValue) remoteLesson["res_intendeddate"] = intendedDate.Value;
-                if (!string.IsNullOrEmpty(intendedStartingTime)) remoteLesson["res_intendedstartingtime"] = intendedStartingTime;
-                if (!string.IsNullOrEmpty(intendedEndingTime)) remoteLesson["res_intendedendingtime"] = intendedEndingTime;
-                if (!string.IsNullOrEmpty(intendedBreak)) remoteLesson["res_intendedbreak"] = intendedBreak;
-                if (intendedLessonDuration != 0) remoteLesson["res_intendedlessonduration"] = intendedLessonDuration;
-                if (intendedBookingDuration != 0) remoteLesson["res_intendedbookingduration"] = intendedBookingDuration;
-                remoteLesson["res_sessionmode"] = false;
-                remoteLesson["res_availableseats"] = null;
-                remoteLesson["res_takenseats"] = null;
-                remoteLesson["res_attendees"] = null;
-
-                /*
-                 * recupero tutte le aule virtuali
-                 * le filtro e seleziono la prima di quelle che non hanno una relazione con la lezione nella data prevista scelta
-                 */
-                var fetchVirtualClassroom = $@"<?xml version=""1.0"" encoding=""utf-16""?>
-                                    <fetch top=""1"">
-                                        <entity name=""res_classroom"">
-                                        <attribute name=""res_classroomid"" />
-                                        <attribute name=""res_name"" />
-                                        <filter>
-                                            <condition attribute=""statecode"" operator=""eq"" value=""0"" />
-                                            <condition attribute=""res_type"" operator=""eq"" value=""0"" />
-                                        </filter>
-                                        <link-entity name=""res_classroombooking"" from=""res_classroomid"" to=""res_classroomid"" link-type=""not any"" alias=""linkedLesson"">
-                                            <filter>
-                                            <condition attribute=""statecode"" operator=""eq"" value=""0"" />
-                                            <condition attribute=""res_intendeddate"" operator=""eq"" value=""{intendedDate}"" />
-                                            </filter>
-                                        </link-entity>
-                                        </entity>
-                                    </fetch>";
-
-                EntityCollection virtualClassrooms = service.RetrieveMultiple(new FetchExpression(fetchVirtualClassroom));
-                if (virtualClassrooms.Entities.Count > 0)
-                {
-                    Entity entity = virtualClassrooms.Entities[0];
-
-                    if (entity.Contains("res_classroomid"))
-                    {
-                        Guid classroomId = entity.GetAttributeValue<Guid>("res_classroomid");
-                        remoteLesson["res_classroomid"] = new EntityReference("res_classroom", classroomId);
-                        if (entity.Contains("res_name"))
-                        {
-                            string classroomName = entity.GetAttributeValue<string>("res_name");
-                            if (!string.IsNullOrEmpty(code)) remoteLesson["res_code"] = $"{code} (Remote, Moved To: {classroomName})";
-                        } else
-                        {
-                            if (!string.IsNullOrEmpty(code)) remoteLesson["res_code"] = $"{code} (Remote, Moved To: {null})";
-                        }
-                    }
-                    else
-                    {
-                        //SE NON NE TROVA UNA, LA CREA
-                        tracingService.Trace("No virtual classroom found.");
-                    }
-
-                }
-
-                /**
-                 * dopo aver creato il record in questione
-                 * recupero dal db gli iscritti alla prima lezione
-                 * ordinati per data di creazione (del record di relazione) discendente
-                 * seleziono tanti record, a partire dal primo, quanti sono gli iscritti "in surplus"
-                 * elimino l'associazione con la prima lezione e li associo alla nuova lezione in modalità "da remoto"
-                 */
-                int attendeesSurplus = takenSeats - classroomSeats;
-                var fetchAttendees = $@"<?xml version=""1.0"" encoding=""utf-16""?>
-                            <fetch top=""{attendeesSurplus}"">
-                              <entity name=""res_attendance"">
-                                <filter>
-                                  <condition attribute=""res_classroombooking"" operator=""eq"" value=""{lessonId}"" />
-                                </filter>
-                                <order attribute=""createdon"" descending=""true"" />
-                              </entity>
-                            </fetch>";
-
-                EntityCollection attendees = service.RetrieveMultiple(new FetchExpression(fetchAttendees));
-
-                if (attendees.Entities.Count > 0)
-                {
-                    foreach (Entity attendee in attendees.Entities)
-                    {
-                        attendee.Attributes.Remove("res_classroombooking");
-                        attendee.Attributes.Add("res_classroombooking", new EntityReference("res_classroombooking", remoteLessonId));
-
-                        service.Update(attendee);
-                    }
-                }
-
-                service.Update(remoteLesson);
-                /**
-                 * con power automate invio una mail agli iscritti in questione 
-                 * per notificargli che i posti in aula sono esauriti e che dovranno assistere da remoto
-                 * tramite il link che verrà generato
-                 *              */
-            }
-
-            return "Il numero degli iscritti ha superato il numero dei posti disponibili. Gli ultimi iscritti dopo il superamento del limite riceveranno un link per assistere da remoto.";
+            return JsonConvert.SerializeObject(updates);
         }
 
         #region INTERNAL METHODS
@@ -697,6 +721,14 @@ namespace FM.PAP.CLIENTACTION
             [System.Runtime.Serialization.DataMember] public string IntendedBreak { get; set; }
             [System.Runtime.Serialization.DataMember] public Decimal IntendedLessonDuration { get; set; }
             [System.Runtime.Serialization.DataMember] public Decimal IntendedBookingDuration { get; set; }
+        }
+
+        public class UpdatedAttendees
+        {
+            [System.Runtime.Serialization.DataMember] public int Attendees { get; set; }
+            [System.Runtime.Serialization.DataMember] public int RemoteAttendees { get; set; }
+            [System.Runtime.Serialization.DataMember] public int AvailableSeats { get; set; }
+            [System.Runtime.Serialization.DataMember] public int TakenSeats { get; set; }
         }
     }
 }

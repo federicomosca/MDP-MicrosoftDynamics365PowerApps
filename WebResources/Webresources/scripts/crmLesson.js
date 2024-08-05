@@ -52,7 +52,9 @@ if (typeof (FM.PAP.LESSON) == "undefined") {
 
     const fields = _self.formModel.fields;
     //---------------------------------------------------
-    _self.checkUrl = formContext => {
+    _self.checkUrl = executionContext => {
+        var formContext = executionContext.getFormContext();
+
         let url = formContext.getAttribute(fields.url).getValue();
         /*formContext.getControl(fields.url).setVisible(url === null ? false : true);*/
         if (!url) formContext.getControl(fields.url).setVisible(false);
@@ -367,113 +369,73 @@ if (typeof (FM.PAP.LESSON) == "undefined") {
             const control = formContext.getControl(field);
             if (control) {
                 if (sessionMode) {
+                    control.setDisabled(false);
                     control.setVisible(true);
                 } else {
+                    control.setDisabled(true);
                     control.setVisible(false);
                 }
             }
         });
     }
     //---------------------------------------------------
-    _self.updateAttendees = (formContext, gridContext) => {
+    _self.updateAttendees = executionContext => {
+        var formContext = executionContext.getFormContext();
 
-        let attendeesCount = gridContext.getGrid().getTotalRecordCount();
+        const sessionMode = formContext.getAttribute(fields.sessionMode).getValue();
+
         const attendeesField = formContext.getAttribute(fields.attendees);
+        const attendeesControl = formContext.getControl("subgrid_attendances");
+        const gridContext = attendeesControl.getGrid();
 
-            //        attendeesField ? attendeesField.setValue(attendeesCount) : null;
+        if (gridContext) {
+            if (!sessionMode) {
+                const attendeesCount = gridContext.getTotalRecordCount();
+                attendeesField.setValue(attendeesCount);
+            } else {
+                const lessonId = formContext.data.entity.getId();
 
-            //        if (attendeesCount > 0) {
+                const remoteAttendeesField = formContext.getAttribute("res_remoteattendees");
+                const takenSeatsField = formContext.getAttribute("res_takenseats");
+                const availableSeatsField = formContext.getAttribute("res_availableseats");
 
+                // Parameters
+                var parameters = {};
+                parameters.jsonDataInput = JSON.stringify(lessonId); // Edm.String
+                parameters.actionName = "COUNT_ATTENDEES"; // Edm.String
 
-            //            const classroomField = formContext.getAttribute(fields.classroom);
-            //            const availableSeatsField = formContext.getAttribute(fields.availableSeats);
-            //            const takenSeatsField = formContext.getAttribute(fields.takenSeats);
+                fetch(Xrm.Utility.getGlobalContext().getClientUrl() + "/api/data/v9.2/res_ClientAction", {
+                    method: "POST",
+                    headers: {
+                        "OData-MaxVersion": "4.0",
+                        "OData-Version": "4.0",
+                        "Content-Type": "application/json; charset=utf-8",
+                        "Accept": "application/json"
+                    },
+                    body: JSON.stringify(parameters)
+                }).then(
+                    function success(response) {
+                        return response.json().then((json) => { if (response.ok) { return [response, json]; } else { throw json.error; } });
+                    }
+                ).then(function (responseObjects) {
+                    var response = responseObjects[0];
+                    var responseBody = responseObjects[1];
+                    var result = responseBody;
+                    console.log(result);
+                    // Return Type: mscrm.res_ClientActionResponse
+                    // Output Parameters
+                    var jsondataoutput = result["jsonDataOutput"]; // Edm.String
+                    const updatedAttendees = JSON.parse(jsondataoutput);
 
-            //            let classroomId = classroomField && classroomField.getValue() ? classroomField.getValue()[0].id : null;
-
-            //            Xrm.WebApi.retrieveRecord("res_classroom", classroomId, "?$select=res_seats,res_name").then(
-            //                function (classroom) {
-            //                    const classroomSeats = classroom.res_seats ?? 0;
-
-            //                    takenSeatsField ? takenSeatsField.setValue(attendeesCount) : null;
-            //                    let takenSeats = takenSeatsField && takenSeatsField.getValue() ? takenSeatsField.getValue() : 0;
-
-            //                    availableSeatsField ? availableSeatsField.setValue(classroomSeats - takenSeats) : null;
-
-            //                    if (takenSeats > classroomSeats) {
-
-            //                        const code = formContext.getAttribute(fields.code) && formContext.getAttribute(fields.code).getValue() ? formContext.getAttribute(fields.code).getValue() : null;
-            //                        const lessonId = cleanId(formContext.data.entity.getId());
-            //                        const moduleId = formContext.getAttribute(fields.module) && formContext.getAttribute(fields.module).getValue() ? formContext.getAttribute(fields.module).getValue()[0].id : null;
-            //                        const courseId = formContext.getAttribute(fields.course) && formContext.getAttribute(fields.course).getValue() ? formContext.getAttribute(fields.course).getValue()[0].id : null;
-            //                        const referentId = formContext.getControl(fields.referent) && formContext.getControl(fields.referent).getAttribute().getValue() ? formContext.getControl(fields.referent).getAttribute().getValue()[0].id : null;
-            //                        const intendedDate = formContext.getAttribute(fields.intendedDate) && formContext.getAttribute(fields.intendedDate).getValue() ? formContext.getAttribute(fields.intendedDate).getValue() : null;
-            //                        const intendedStartingTime = formContext.getAttribute(fields.intendedStartingTime) && formContext.getAttribute(fields.intendedStartingTime).getValue() ? formContext.getAttribute(fields.intendedStartingTime).getValue() : null;
-            //                        const intendedEndingTime = formContext.getAttribute(fields.intendedEndingTime) && formContext.getAttribute(fields.intendedEndingTime).getValue() ? formContext.getAttribute(fields.intendedEndingTime).getValue() : null;
-            //                        const intendedBreak = formContext.getAttribute(fields.intendedBreak) && formContext.getAttribute(fields.intendedBreak).getValue() ? formContext.getAttribute(fields.intendedBreak).getValue() : null;
-            //                        const intendedLessonDuration = formContext.getAttribute(fields.intendedLessonDuration) && formContext.getAttribute(fields.intendedLessonDuration).getValue() ? formContext.getAttribute(fields.intendedLessonDuration).getValue() : null;
-            //                        const intendedBookingDuration = formContext.getAttribute(fields.intendedBookingDuration) && formContext.getAttribute(fields.intendedBookingDuration).getValue() ? formContext.getAttribute(fields.intendedBookingDuration).getValue() : null;
-
-            //                        console.log(code);
-            //                        console.log(referentId);
-
-            //                        let json = {
-            //                            Code: code,
-            //                            ClassroomSeats: classroomSeats,
-            //                            TakenSeats: takenSeats,
-            //                            LessonId: lessonId,
-            //                            ModuleId: moduleId,
-            //                            CourseId: courseId,
-            //                            ReferentId: referentId,
-            //                            IntendedDate: toLocalISOString(intendedDate),
-            //                            IntendedStartingTime: intendedStartingTime,
-            //                            IntendedEndingTime: intendedEndingTime,
-            //                            IntendedBreak: intendedBreak,
-            //                            IntendedLessonDuration: intendedLessonDuration,
-            //                            IntendedBookingDuration: intendedBookingDuration
-            //                        };
-
-            //                        // Parameters
-            //                        var parameters = {};
-            //                        parameters.jsonDataInput = JSON.stringify(json) // Edm.String
-            //                        parameters.actionName = 'HANDLE_ATTENDEES_SURPLUS'; // Edm.String
-
-            //                        fetch(Xrm.Utility.getGlobalContext().getClientUrl() + "/api/data/v9.2/res_ClientAction", {
-            //                            method: "POST",
-            //                            headers: {
-            //                                "OData-MaxVersion": "4.0",
-            //                                "OData-Version": "4.0",
-            //                                "Content-Type": "application/json; charset=utf-8",
-            //                                "Accept": "application/json"
-            //                            },
-            //                            body: JSON.stringify(parameters)
-            //                        }).then(
-            //                            function success(response) {
-            //                                return response.json().then((json) => { if (response.ok) { return [response, json]; } else { throw json.error; } });
-            //                            }
-            //                        ).then(function (responseObjects) {
-            //                            var response = responseObjects[0];
-            //                            var responseBody = responseObjects[1];
-            //                            var result = responseBody;
-            //                            console.log(result);
-            //                            // Return Type: mscrm.res_ClientActionResponse
-            //                            // Output Parameters
-            //                            var jsondataoutput = result["jsonDataOutput"]; // Edm.String
-
-
-            //                        }).catch(function (error) {
-            //                            console.log(error.message);
-            //                        });
-            //                    }
-            //                },
-            //                function (error) { console.log(error.message); }
-            //            );
-            //        } else {
-            //            formContext.getControl(fields.takenSeats).setVisible(false)
-            //        }
-            //    } else {
-            //        console.log("Subgrid non trovata.");
-            //    }
+                    attendeesField.setValue(updatedAttendees["Attendees"]);
+                    remoteAttendeesField.setValue(updatedAttendees["RemoteAttendees"]);
+                    availableSeatsField.setValue(updatedAttendees["AvailableSeats"]);
+                    takenSeatsField.setValue(updatedAttendees["TakenSeats"]);
+                }).catch(function (error) {
+                    console.log(error.message);
+                });
+            }
+        }
     }
     //---------------------------------------------------
 
@@ -492,7 +454,6 @@ if (typeof (FM.PAP.LESSON) == "undefined") {
         //Init event
         formContext.data.entity.addOnSave(_self.onSaveForm);
 
-        //formContext.getAttribute(fields.sessionMode).addOnChange(_self.onChangeSessionMode);
         formContext.getAttribute(fields.classroom).addOnChange(_self.onChangeClassroom);
         formContext.getAttribute(fields.module).addOnChange(_self.onChangeModule);
         formContext.getAttribute(fields.intendedDate).addOnChange(_self.onChangeIntendedDate);
@@ -500,23 +461,14 @@ if (typeof (FM.PAP.LESSON) == "undefined") {
         formContext.getAttribute(fields.intendedStartingTime).addOnChange(_self.onChangeIntendedTime);
         formContext.getAttribute(fields.intendedEndingTime).addOnChange(_self.onChangeIntendedTime);
         formContext.getAttribute(fields.sessionMode).addOnChange(_self.handleSessionModeVisibilities);
-
+        const attendancesControl = formContext.getControl("subgrid_attendances");
+        if (attendancesControl) {
+            attendancesControl.addOnLoad(_self.updateAttendees);
+        }
 
         //Init function
-        _self.checkUrl(formContext);
+        _self.checkUrl(executionContext);
         _self.handleSessionModeVisibilities(executionContext);
-
-        //try {
-        //    const gridContext = formContext.getControl("subgrid_attendances");
-
-        //    if (gridContext) {
-        //        _self.updateAttendees(formContext, gridContext);
-        //    }
-        //    else throw new Error('Grid Context not found.');
-        //}
-        //catch (error) {
-        //    alert(error.message);
-        //}
 
         switch (formContext.ui.getFormType()) {
             case CREATE_FORM:
