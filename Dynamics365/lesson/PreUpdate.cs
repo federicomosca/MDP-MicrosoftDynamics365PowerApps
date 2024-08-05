@@ -1,6 +1,5 @@
-﻿using FORMEDO;
-using FORMEDO.UTILS;
-using RSMNG.FORMEDO.LESSON;
+﻿using FM.PAP.UTILS;
+using FM.PAP.LESSON;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
 using System;
@@ -10,7 +9,7 @@ using System.ServiceModel;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace RSMNG.FORMEDO.LESSON
+namespace FM.PAP.LESSON
 {
     public class PreUpdate : IPlugin
     {
@@ -36,9 +35,9 @@ namespace RSMNG.FORMEDO.LESSON
 
                     string[] codeSegments = new string[3];
 
-                    EntityReference erClassroom = Utils.GetAttributeFromTargetOrPreImage<EntityReference>("res_classroomid", target, preImage);
-                    Entity classroom = service.Retrieve("res_classroom", erClassroom.Id, new ColumnSet("res_name"));
-                    codeSegments[0] = classroom["res_name"] != null ? classroom.GetAttributeValue<string>("res_name") + " - " : string.Empty;
+                    EntityReference erClassroom = target.Contains("res_classroomid") && target.GetAttributeValue<EntityReference>("res_classroomid") != null ? target.GetAttributeValue<EntityReference>("res_classroomid") : null;
+                    Entity classroom = erClassroom != null ? service.Retrieve("res_classroom", erClassroom.Id, new ColumnSet("res_name")) : null;
+                    codeSegments[0] = classroom != null && classroom["res_name"] != null ? classroom.GetAttributeValue<string>("res_name") + " - " : "Da Remoto - ";
 
                     EntityReference erModule = Utils.GetAttributeFromTargetOrPreImage<EntityReference>("res_moduleid", target, preImage);
                     Entity module = service.Retrieve("res_module", erModule.Id, new ColumnSet("res_title"));
@@ -47,7 +46,6 @@ namespace RSMNG.FORMEDO.LESSON
                     DateTime date = Utils.GetAttributeFromTargetOrPreImage<DateTime>("res_intendeddate", target, preImage);
                     codeSegments[2] = date.ToString("dd-MM-yyyy");
 
-                    tracingService.Trace(UtilsLesson.GenerateCode(codeSegments));
                     target["res_code"] = UtilsLesson.GenerateCode(codeSegments);
                 }
                 catch (FaultException<OrganizationServiceFault> ex)

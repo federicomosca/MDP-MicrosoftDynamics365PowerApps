@@ -8,7 +8,7 @@ using System.ServiceModel;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace RSMNG.FORMEDO.MODULE
+namespace FM.PAP.MODULE
 {
     public class PostUpdate : IPlugin
     {

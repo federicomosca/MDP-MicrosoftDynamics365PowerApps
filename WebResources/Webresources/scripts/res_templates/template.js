@@ -1,15 +1,15 @@
 //sostituire PROGETTO con nome progetto
 //sostituire ENTITY con nome entità
-if (typeof (RSMNG) == "undefined") {
-    RSMNG = {};
+if (typeof (FM) == "undefined") {
+    FM = {};
 }
 
-if (typeof (RSMNG.PROGETTO) == "undefined") {
-    RSMNG.PROGETTO = {};
+if (typeof (FM.PROGETTO) == "undefined") {
+    FM.PROGETTO = {};
 }
 
-if (typeof (RSMNG.PROGETTO.ENTITY) == "undefined") {
-    RSMNG.PROGETTO.ENTITY = {};
+if (typeof (FM.PROGETTO.ENTITY) == "undefined") {
+    FM.PROGETTO.ENTITY = {};
 }
 
 (function () {
@@ -87,19 +87,19 @@ if (typeof (RSMNG.PROGETTO.ENTITY) == "undefined") {
         //Init function
 
         switch (formContext.ui.getFormType()) {
-            case RSMNG.Global.CRM_FORM_TYPE_CREATE:
+            case FM.Global.CRM_FORM_TYPE_CREATE:
                 _self.onLoadCreateForm(executionContext);
                 break;
-            case RSMNG.Global.CRM_FORM_TYPE_UPDATE:
+            case FM.Global.CRM_FORM_TYPE_UPDATE:
                 _self.onLoadUpdateForm(executionContext);
                 break;
-            case RSMNG.Global.CRM_FORM_TYPE_READONLY:
+            case FM.Global.CRM_FORM_TYPE_READONLY:
                 _self.onLoadReadyOnlyForm(executionContext);
                 break;
-            case RSMNG.Global.CRM_FORM_TYPE_QUICKCREATE:
+            case FM.Global.CRM_FORM_TYPE_QUICKCREATE:
                 _self.onLoadCreateForm(executionContext);
                 break;
         }
     }
 }
-).call(RSMNG.PROGETTO.ENTITY);
+).call(FM.PROGETTO.ENTITY);

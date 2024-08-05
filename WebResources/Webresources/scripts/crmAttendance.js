@@ -1,15 +1,16 @@
 ﻿    //sostituire PROGETTO con nome progetto
     //sostituire ENTITY con nome entità
-    if (typeof (RSMNG) == "undefined") {
-        RSMNG = {};
+    if (typeof (
+    ) == "undefined") {
+        FM = {};
     }
 
-    if (typeof (RSMNG.FORMEDO) == "undefined") {
-        RSMNG.FORMEDO = {};
+    if (typeof (FM.PAP) == "undefined") {
+        FM.PAP = {};
     }
 
-    if (typeof (RSMNG.FORMEDO.ATTENDANCE) == "undefined") {
-        RSMNG.FORMEDO.ATTENDANCE = {};
+    if (typeof (FM.PAP.ATTENDANCE) == "undefined") {
+        FM.PAP.ATTENDANCE = {};
     }
 
     (function () {
@@ -123,4 +124,4 @@
             }
         }
     }
-    ).call(RSMNG.FORMEDO.ATTENDANCE);
+    ).call(FM.PAP.ATTENDANCE);

@@ -1,15 +1,15 @@
 ﻿//sostituire PROGETTO con nome progetto
 //sostituire ENTITY con nome entità
-if (typeof (RSMNG) == "undefined") {
-    RSMNG = {};
+if (typeof (FM) == "undefined") {
+    FM = {};
 }
 
-if (typeof (RSMNG.FORMEDO) == "undefined") {
-    RSMNG.FORMEDO = {};
+if (typeof (FM.PAP) == "undefined") {
+    FM.PAP = {};
 }
 
-if (typeof (RSMNG.FORMEDO.LESSON) == "undefined") {
-    RSMNG.FORMEDO.LESSON = {};
+if (typeof (FM.PAP.LESSON) == "undefined") {
+    FM.PAP.LESSON = {};
 }
 
 (function () {
@@ -39,7 +39,10 @@ if (typeof (RSMNG.FORMEDO.LESSON) == "undefined") {
             sessionMode: "res_sessionmode",
             takenSeats: "res_takenseats",
             availableSeats: "res_availableseats",
-            attendees: "res_attendees"
+            attendees: "res_attendees",
+            remoteAttendees: "res_remoteattendees",
+            inPersonParticipation: "res_inpersonparticipation",
+            url: "res_remoteparticipationurl"
         },
         tabs: {
         },
@@ -49,32 +52,12 @@ if (typeof (RSMNG.FORMEDO.LESSON) == "undefined") {
 
     const fields = _self.formModel.fields;
     //---------------------------------------------------
-    function toLocalISOString(date) {
-        const pad = (n) => (n < 10 ? '0' + n : n);
-        return date.getFullYear() + '-' +
-            pad(date.getMonth() + 1) + '-' +
-            pad(date.getDate()) + 'T' +
-            pad(date.getHours()) + ':' +
-            pad(date.getMinutes()) + ':' +
-            pad(date.getSeconds());
-    };
-    //---------------------------------------------------
-    function handleSeatsVisibility(formContext) {
-        const sessionMode = formContext.getAttribute(fields.sessionMode) && formContext.getAttribute(fields.sessionMode).getValue() ? formContext.getAttribute(fields.sessionMode).getValue() : null;
-
-        if (sessionMode === true) {
-            formContext.getControl(fields.availableSeats).setVisible(true);
-            formContext.getControl(fields.takenSeats).setVisible(true);
-        } else {
-            const availableSeatsControl = formContext.getControl(fields.availableSeats);
-            const takenSeatsControl = formContext.getControl(fields.takenSeats);
-            if (availableSeatsControl && takenSeatsControl) {
-                availableSeatsControl.setDisabled(true);
-                takenSeatsControl.setDisabled(true);
-            }
-        }
-    };
-    //---------------------------------------------------
+    _self.checkUrl = formContext => {
+        let url = formContext.getAttribute(fields.url).getValue();
+        /*formContext.getControl(fields.url).setVisible(url === null ? false : true);*/
+        if (!url) formContext.getControl(fields.url).setVisible(false);
+        else formContext.getControl(fields.url).setVisible(true);
+    }
 
     /*
     Esempio di stringa interpolata
@@ -111,17 +94,6 @@ if (typeof (RSMNG.FORMEDO.LESSON) == "undefined") {
     _self.onChangeClassroom = function (executionContext) {
         let formContext = executionContext.getFormContext();
 
-        handleSeatsVisibility(formContext);
-
-        clearFields(formContext, fieldsToClear = [
-            fields.code,
-            fields.intendedDate,
-            fields.intendedStartingTime,
-            fields.intendedEndingTime,
-            fields.intendedBreak,
-            fields.intendedBookingDuration
-        ]);
-
         const classroomField = formContext.getAttribute(fields.classroom);
         const classroomId = classroomField && classroomField.getValue() ? cleanId(classroomField.getValue()[0].id) : null;
         if (classroomId) {
@@ -148,7 +120,6 @@ if (typeof (RSMNG.FORMEDO.LESSON) == "undefined") {
             fields.intendedBreak,
             fields.intendedBookingDuration
         ]);
-
 
         const moduleField = formContext.getAttribute(fields.module);
         const referentField = formContext.getControl(fields.referent);
@@ -322,8 +293,6 @@ if (typeof (RSMNG.FORMEDO.LESSON) == "undefined") {
                     }).catch(function (error) {
                         console.log(error.message);
                     });
-                } else {
-                    errorMessage = '\U+00C8 opportuno indicare prima un\'aula e una data.';
                 }
             } else {
                 errorMessage = 'La data prevista non pu\u00F2 essere precedente a oggi.';
@@ -334,186 +303,178 @@ if (typeof (RSMNG.FORMEDO.LESSON) == "undefined") {
         formContext.getControl(fields.intendedDate).setNotification(errorMessage);
     };
     //---------------------------------------------------
-    _self.onChangeBookingTime = function (executionContext) {
-        var formContext = executionContext.getFormContext();
-        var eventSourceAttribute = executionContext.getEventSource();
-        var eventSourceControl = formContext.getControl(eventSourceAttribute.getName());
-        var errorMessage = '';
+    _self.onChangeIntendedTime = executionContext => {
+        const formContext = executionContext.getFormContext();
+        const eventSourceAttribute = executionContext.getEventSource();
+        const eventSourceControl = formContext.getControl(eventSourceAttribute.getName());
+        formContext.getControl(fields.intendedStartingTime).clearNotification();
+        formContext.getControl(fields.intendedEndingTime).clearNotification();
+        formContext.getControl(fields.intendedBreak).clearNotification();
 
-        var time = eventSourceControl.getAttribute().getValue();
+        try {
+            let intendedStartingTime;
+            let intendedEndingTime;
+            let intendedBreak;
+            let intendedBookingDuration;
 
-        /**
-         * verifico che gli orari di inizio e di fine siano formattati correttamente
-         */
-        var validationMessage = validateTime(time);
+            const intendedStartingTimeString = formContext.getAttribute(fields.intendedStartingTime).getValue();
+            const intendedEndingTimeString = formContext.getAttribute(fields.intendedEndingTime).getValue();
+            const intendedBreakString = formContext.getAttribute(fields.intendedBreak).getValue();
 
-        if (validationMessage == "Ok") {
-            const intendedBookingDurationField = formContext.getAttribute(fields.intendedBookingDuration) ?? null;
-            const intendedLessonDurationField = formContext.getAttribute(fields.intendedLessonDuration) ?? null;
-            const intendedStartingTimeField = formContext.getAttribute(fields.intendedStartingTime) ?? null;
-            const intendedEndingTimeField = formContext.getAttribute(fields.intendedEndingTime) ?? null;
-            const intendedBreakField = formContext.getAttribute(fields.intendedBreak) ?? null;
+            if (intendedStartingTimeString) intendedStartingTime = timeStringToMinutes(intendedStartingTimeString);
+            if (intendedEndingTimeString) intendedEndingTime = timeStringToMinutes(intendedEndingTimeString);
+            if (intendedBreakString) intendedBreak = timeStringToMinutes(intendedBreakString);
 
-            var intendedStartingTime = intendedStartingTimeField && intendedStartingTimeField.getValue() ? parseFloat(intendedStartingTimeField.getValue()) : null;
-            var intendedEndingTime = intendedEndingTimeField && intendedEndingTimeField.getValue() ? parseFloat(intendedEndingTimeField.getValue()) : null;
-            var intendedBreak = intendedBreakField && intendedBreakField.getValue() ? parseFloat(intendedBreakField.getValue()) : null;
-
-            /**
-             * verifico che ora di inizio non sia dopo l'ora di fine
-             */
             if (intendedStartingTime && intendedEndingTime) {
-                if (intendedStartingTime > intendedEndingTime) {
-                    errorMessage = 'Data Inizio Prevista non pu\u00f2 essere antecedente a Data Fine Prevista';
-                } else {
-                    var intendedBookingDuration = intendedEndingTime - intendedStartingTime;
-                    intendedBookingDuration != null ? intendedBookingDurationField.setValue(validateDuration(`${intendedBookingDuration}`)) : null;
+                if (intendedStartingTime < intendedEndingTime) {
+                    intendedBookingDuration = intendedEndingTime - intendedStartingTime;
+                    const intendedBookingDurationString = minutesToTimeString(intendedBookingDuration);
+                    formContext.getAttribute(fields.intendedBookingDuration).setValue(intendedBookingDurationString);
+                }
+                else throw new Error('Ora Inizio Prevista non può essere antecedente a Ora Fine Prevista');
+            }
 
-                    var intendedLessonDuration = intendedBreak && intendedBookingDuration ? intendedBookingDuration - intendedBreak : intendedBookingDuration ?? null;
-                    intendedLessonDuration != null ? intendedLessonDurationField.setValue(validateDuration(`${intendedLessonDuration}`)) : null;
-
-                    /**
-                     * calcolo della durata prevista in minuti
-                     */
-                    //let intendedStartingTimeHours = intendedStartingTime.split(/[:\,\.]/)[0];
-                    //let intendedEndingTimeHours = intendedEndingTime.split(/[:\,\.]/)[0];
-                    //let intendedStartingTimeMinutes = intendedStartingTime.split(/[:\,\.]/)[1];
-                    //let intendedEndingTimeMinutes = intendedEndingTime.split(/[:\,\.]/)[1];
-                    //DA CONTINUARE
+            if (intendedBreak && intendedBookingDuration) {
+                if (intendedBreak <= intendedBookingDuration) {
+                    const intendedLessonDuration = intendedBookingDuration - intendedBreak;
+                    const intendedLessonDurationString = minutesToTimeString(intendedLessonDuration);
+                    formContext.getAttribute(fields.intendedLessonDuration).setValue(intendedLessonDurationString);
+                }
+                else {
+                    formContext.getAttribute(fields.intendedLessonDuration).setValue(null);
+                    throw new Error('La pausa non può essere maggiore della durata della prenotazione.');
                 }
             }
-        } else {
-            errorMessage = validationMessage;
-        }
-        eventSourceControl.clearNotification();
 
-        eventSourceControl.setNotification(errorMessage);
+        } catch (error) {
+            eventSourceControl.setNotification(error.message);
+        }
     };
     //---------------------------------------------------
-    _self.onChangeSessionMode = (executionContext) => {
+    _self.handleSessionModeVisibilities = executionContext => {
         var formContext = executionContext.getFormContext();
+        let sessionMode = formContext.getAttribute(fields.sessionMode).getValue();
 
-        /**
-         * se la session mode è settata su Remote, nascondo i campi classroom, available seats e taken seats
-         */
-        const sessionModeField = formContext.getAttribute(fields.sessionMode);
-        const availableSeatsField = formContext.getAttribute(fields.availableSeats);
-        const takenSeatsField = formContext.getAttribute(fields.takenSeats);
+        const fieldsToHandle = [
+            fields.classroom,
+            fields.availableSeats,
+            fields.takenSeats,
+            fields.inPersonParticipation,
+            fields.remoteAttendees
+        ];
 
-        var sessionMode = sessionModeField && sessionModeField.getValue() ? sessionModeField.getValue() : null;
-
-        /**
-         * per ogni campo interessato (classroom, available e taken seats), controllo che il campo esista, 
-         * dopodiché, se session mode è impostato su Remote, lo nascondo, contrariamente lo mostro
-         */
-        availableSeatsField ? !sessionMode ? formContext.getControl(fields.availableSeats).setVisible(false) : formContext.getControl(fields.availableSeats).setVisible(true) : null;
-        takenSeatsField ? !sessionMode ? formContext.getControl(fields.takenSeats).setVisible(false) : formContext.getControl(fields.takenSeats).setVisible(true) : null;
+        fieldsToHandle.forEach(field => {
+            const control = formContext.getControl(field);
+            if (control) {
+                if (sessionMode) {
+                    control.setVisible(true);
+                } else {
+                    control.setVisible(false);
+                }
+            }
+        });
     }
     //---------------------------------------------------
-    //_self.countAttendees = function (executionContext) {
-    //    var formContext = executionContext.getFormContext();
+    _self.updateAttendees = (formContext, gridContext) => {
 
-    //    const gridContext = formContext.getControl("subgrid_attendances");
+        let attendeesCount = gridContext.getGrid().getTotalRecordCount();
+        const attendeesField = formContext.getAttribute(fields.attendees);
 
-    //    if (gridContext) {
-    //        let attendeesCount = gridContext.getGrid().getTotalRecordCount();
-    //        const attendeesField = formContext.getAttribute(fields.attendees);
+            //        attendeesField ? attendeesField.setValue(attendeesCount) : null;
 
-    //        attendeesField ? attendeesField.setValue(attendeesCount) : null;
-
-    //        if (attendeesCount > 0) {
-
-    //            handleSeatsVisibility(formContext);
-
-    //            const classroomField = formContext.getAttribute(fields.classroom);
-    //            const availableSeatsField = formContext.getAttribute(fields.availableSeats);
-    //            const takenSeatsField = formContext.getAttribute(fields.takenSeats);
-
-    //            let classroomId = classroomField && classroomField.getValue() ? classroomField.getValue()[0].id : null;
-
-    //            Xrm.WebApi.retrieveRecord("res_classroom", classroomId, "?$select=res_seats,res_name").then(
-    //                function (classroom) {
-    //                    const classroomSeats = classroom.res_seats ?? 0;
-
-    //                    takenSeatsField ? takenSeatsField.setValue(attendeesCount) : null;
-    //                    let takenSeats = takenSeatsField && takenSeatsField.getValue() ? takenSeatsField.getValue() : 0;
-
-    //                    availableSeatsField ? availableSeatsField.setValue(classroomSeats - takenSeats) : null;
-
-    //                    if (takenSeats > classroomSeats) {
-
-    //                        const code = formContext.getAttribute(fields.code) && formContext.getAttribute(fields.code).getValue() ? formContext.getAttribute(fields.code).getValue() : null;
-    //                        const lessonId = cleanId(formContext.data.entity.getId());
-    //                        const moduleId = formContext.getAttribute(fields.module) && formContext.getAttribute(fields.module).getValue() ? formContext.getAttribute(fields.module).getValue()[0].id : null;
-    //                        const courseId = formContext.getAttribute(fields.course) && formContext.getAttribute(fields.course).getValue() ? formContext.getAttribute(fields.course).getValue()[0].id : null;
-    //                        const referentId = formContext.getControl(fields.referent) && formContext.getControl(fields.referent).getAttribute().getValue() ? formContext.getControl(fields.referent).getAttribute().getValue()[0].id : null;
-    //                        const intendedDate = formContext.getAttribute(fields.intendedDate) && formContext.getAttribute(fields.intendedDate).getValue() ? formContext.getAttribute(fields.intendedDate).getValue() : null;
-    //                        const intendedStartingTime = formContext.getAttribute(fields.intendedStartingTime) && formContext.getAttribute(fields.intendedStartingTime).getValue() ? formContext.getAttribute(fields.intendedStartingTime).getValue() : null;
-    //                        const intendedEndingTime = formContext.getAttribute(fields.intendedEndingTime) && formContext.getAttribute(fields.intendedEndingTime).getValue() ? formContext.getAttribute(fields.intendedEndingTime).getValue() : null;
-    //                        const intendedBreak = formContext.getAttribute(fields.intendedBreak) && formContext.getAttribute(fields.intendedBreak).getValue() ? formContext.getAttribute(fields.intendedBreak).getValue() : null;
-    //                        const intendedLessonDuration = formContext.getAttribute(fields.intendedLessonDuration) && formContext.getAttribute(fields.intendedLessonDuration).getValue() ? formContext.getAttribute(fields.intendedLessonDuration).getValue() : null;
-    //                        const intendedBookingDuration = formContext.getAttribute(fields.intendedBookingDuration) && formContext.getAttribute(fields.intendedBookingDuration).getValue() ? formContext.getAttribute(fields.intendedBookingDuration).getValue() : null;
-
-    //                        console.log(code);
-    //                        console.log(referentId);
-
-    //                        let json = {
-    //                            Code: code,
-    //                            ClassroomSeats: classroomSeats,
-    //                            TakenSeats: takenSeats,
-    //                            LessonId: lessonId,
-    //                            ModuleId: moduleId,
-    //                            CourseId: courseId,
-    //                            ReferentId: referentId,
-    //                            IntendedDate: toLocalISOString(intendedDate),
-    //                            IntendedStartingTime: intendedStartingTime,
-    //                            IntendedEndingTime: intendedEndingTime,
-    //                            IntendedBreak: intendedBreak,
-    //                            IntendedLessonDuration: intendedLessonDuration,
-    //                            IntendedBookingDuration: intendedBookingDuration
-    //                        };
-
-    //                        // Parameters
-    //                        var parameters = {};
-    //                        parameters.jsonDataInput = JSON.stringify(json) // Edm.String
-    //                        parameters.actionName = 'HANDLE_ATTENDEES_SURPLUS'; // Edm.String
-
-    //                        fetch(Xrm.Utility.getGlobalContext().getClientUrl() + "/api/data/v9.2/res_ClientAction", {
-    //                            method: "POST",
-    //                            headers: {
-    //                                "OData-MaxVersion": "4.0",
-    //                                "OData-Version": "4.0",
-    //                                "Content-Type": "application/json; charset=utf-8",
-    //                                "Accept": "application/json"
-    //                            },
-    //                            body: JSON.stringify(parameters)
-    //                        }).then(
-    //                            function success(response) {
-    //                                return response.json().then((json) => { if (response.ok) { return [response, json]; } else { throw json.error; } });
-    //                            }
-    //                        ).then(function (responseObjects) {
-    //                            var response = responseObjects[0];
-    //                            var responseBody = responseObjects[1];
-    //                            var result = responseBody;
-    //                            console.log(result);
-    //                            // Return Type: mscrm.res_ClientActionResponse
-    //                            // Output Parameters
-    //                            var jsondataoutput = result["jsonDataOutput"]; // Edm.String
+            //        if (attendeesCount > 0) {
 
 
-    //                        }).catch(function (error) {
-    //                            console.log(error.message);
-    //                        });
-    //                    }
-    //                },
-    //                function (error) { console.log(error.message); }
-    //            );
-    //        } else {
-    //            formContext.getControl(fields.takenSeats).setVisible(false)
-    //        }
-    //    } else {
-    //        console.log("Subgrid non trovata.");
-    //    }
-    ////}
+            //            const classroomField = formContext.getAttribute(fields.classroom);
+            //            const availableSeatsField = formContext.getAttribute(fields.availableSeats);
+            //            const takenSeatsField = formContext.getAttribute(fields.takenSeats);
+
+            //            let classroomId = classroomField && classroomField.getValue() ? classroomField.getValue()[0].id : null;
+
+            //            Xrm.WebApi.retrieveRecord("res_classroom", classroomId, "?$select=res_seats,res_name").then(
+            //                function (classroom) {
+            //                    const classroomSeats = classroom.res_seats ?? 0;
+
+            //                    takenSeatsField ? takenSeatsField.setValue(attendeesCount) : null;
+            //                    let takenSeats = takenSeatsField && takenSeatsField.getValue() ? takenSeatsField.getValue() : 0;
+
+            //                    availableSeatsField ? availableSeatsField.setValue(classroomSeats - takenSeats) : null;
+
+            //                    if (takenSeats > classroomSeats) {
+
+            //                        const code = formContext.getAttribute(fields.code) && formContext.getAttribute(fields.code).getValue() ? formContext.getAttribute(fields.code).getValue() : null;
+            //                        const lessonId = cleanId(formContext.data.entity.getId());
+            //                        const moduleId = formContext.getAttribute(fields.module) && formContext.getAttribute(fields.module).getValue() ? formContext.getAttribute(fields.module).getValue()[0].id : null;
+            //                        const courseId = formContext.getAttribute(fields.course) && formContext.getAttribute(fields.course).getValue() ? formContext.getAttribute(fields.course).getValue()[0].id : null;
+            //                        const referentId = formContext.getControl(fields.referent) && formContext.getControl(fields.referent).getAttribute().getValue() ? formContext.getControl(fields.referent).getAttribute().getValue()[0].id : null;
+            //                        const intendedDate = formContext.getAttribute(fields.intendedDate) && formContext.getAttribute(fields.intendedDate).getValue() ? formContext.getAttribute(fields.intendedDate).getValue() : null;
+            //                        const intendedStartingTime = formContext.getAttribute(fields.intendedStartingTime) && formContext.getAttribute(fields.intendedStartingTime).getValue() ? formContext.getAttribute(fields.intendedStartingTime).getValue() : null;
+            //                        const intendedEndingTime = formContext.getAttribute(fields.intendedEndingTime) && formContext.getAttribute(fields.intendedEndingTime).getValue() ? formContext.getAttribute(fields.intendedEndingTime).getValue() : null;
+            //                        const intendedBreak = formContext.getAttribute(fields.intendedBreak) && formContext.getAttribute(fields.intendedBreak).getValue() ? formContext.getAttribute(fields.intendedBreak).getValue() : null;
+            //                        const intendedLessonDuration = formContext.getAttribute(fields.intendedLessonDuration) && formContext.getAttribute(fields.intendedLessonDuration).getValue() ? formContext.getAttribute(fields.intendedLessonDuration).getValue() : null;
+            //                        const intendedBookingDuration = formContext.getAttribute(fields.intendedBookingDuration) && formContext.getAttribute(fields.intendedBookingDuration).getValue() ? formContext.getAttribute(fields.intendedBookingDuration).getValue() : null;
+
+            //                        console.log(code);
+            //                        console.log(referentId);
+
+            //                        let json = {
+            //                            Code: code,
+            //                            ClassroomSeats: classroomSeats,
+            //                            TakenSeats: takenSeats,
+            //                            LessonId: lessonId,
+            //                            ModuleId: moduleId,
+            //                            CourseId: courseId,
+            //                            ReferentId: referentId,
+            //                            IntendedDate: toLocalISOString(intendedDate),
+            //                            IntendedStartingTime: intendedStartingTime,
+            //                            IntendedEndingTime: intendedEndingTime,
+            //                            IntendedBreak: intendedBreak,
+            //                            IntendedLessonDuration: intendedLessonDuration,
+            //                            IntendedBookingDuration: intendedBookingDuration
+            //                        };
+
+            //                        // Parameters
+            //                        var parameters = {};
+            //                        parameters.jsonDataInput = JSON.stringify(json) // Edm.String
+            //                        parameters.actionName = 'HANDLE_ATTENDEES_SURPLUS'; // Edm.String
+
+            //                        fetch(Xrm.Utility.getGlobalContext().getClientUrl() + "/api/data/v9.2/res_ClientAction", {
+            //                            method: "POST",
+            //                            headers: {
+            //                                "OData-MaxVersion": "4.0",
+            //                                "OData-Version": "4.0",
+            //                                "Content-Type": "application/json; charset=utf-8",
+            //                                "Accept": "application/json"
+            //                            },
+            //                            body: JSON.stringify(parameters)
+            //                        }).then(
+            //                            function success(response) {
+            //                                return response.json().then((json) => { if (response.ok) { return [response, json]; } else { throw json.error; } });
+            //                            }
+            //                        ).then(function (responseObjects) {
+            //                            var response = responseObjects[0];
+            //                            var responseBody = responseObjects[1];
+            //                            var result = responseBody;
+            //                            console.log(result);
+            //                            // Return Type: mscrm.res_ClientActionResponse
+            //                            // Output Parameters
+            //                            var jsondataoutput = result["jsonDataOutput"]; // Edm.String
+
+
+            //                        }).catch(function (error) {
+            //                            console.log(error.message);
+            //                        });
+            //                    }
+            //                },
+            //                function (error) { console.log(error.message); }
+            //            );
+            //        } else {
+            //            formContext.getControl(fields.takenSeats).setVisible(false)
+            //        }
+            //    } else {
+            //        console.log("Subgrid non trovata.");
+            //    }
+    }
     //---------------------------------------------------
 
     /* 
@@ -531,23 +492,31 @@ if (typeof (RSMNG.FORMEDO.LESSON) == "undefined") {
         //Init event
         formContext.data.entity.addOnSave(_self.onSaveForm);
 
-        handleSeatsVisibility(formContext);
-        //_self.countAttendees(executionContext);
-
-        formContext.getAttribute(fields.sessionMode).addOnChange(_self.onChangeSessionMode);
+        //formContext.getAttribute(fields.sessionMode).addOnChange(_self.onChangeSessionMode);
         formContext.getAttribute(fields.classroom).addOnChange(_self.onChangeClassroom);
         formContext.getAttribute(fields.module).addOnChange(_self.onChangeModule);
         formContext.getAttribute(fields.intendedDate).addOnChange(_self.onChangeIntendedDate);
-        formContext.getAttribute(fields.intendedStartingTime).addOnChange(_self.onChangeBookingTime);
-        formContext.getAttribute(fields.intendedEndingTime).addOnChange(_self.onChangeBookingTime);
-        formContext.getAttribute(fields.intendedBreak).addOnChange(_self.onChangeBookingTime);
-
-        //const gridContext = formContext.getControl("subgrid_attendances");
-        //gridContext ? gridContext.addOnLoad(_self.countAttendees) : console.log("cannot access grid context");
-
+        formContext.getAttribute(fields.intendedBreak).addOnChange(_self.onChangeIntendedTime);
+        formContext.getAttribute(fields.intendedStartingTime).addOnChange(_self.onChangeIntendedTime);
+        formContext.getAttribute(fields.intendedEndingTime).addOnChange(_self.onChangeIntendedTime);
+        formContext.getAttribute(fields.sessionMode).addOnChange(_self.handleSessionModeVisibilities);
 
 
         //Init function
+        _self.checkUrl(formContext);
+        _self.handleSessionModeVisibilities(executionContext);
+
+        //try {
+        //    const gridContext = formContext.getControl("subgrid_attendances");
+
+        //    if (gridContext) {
+        //        _self.updateAttendees(formContext, gridContext);
+        //    }
+        //    else throw new Error('Grid Context not found.');
+        //}
+        //catch (error) {
+        //    alert(error.message);
+        //}
 
         switch (formContext.ui.getFormType()) {
             case CREATE_FORM:
@@ -559,4 +528,4 @@ if (typeof (RSMNG.FORMEDO.LESSON) == "undefined") {
         }
     }
 }
-).call(RSMNG.FORMEDO.LESSON);
+).call(FM.PAP.LESSON);

@@ -7,7 +7,8 @@ using System.ServiceModel;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace FORMEDO.UTILS
+namespace 
+    FM.PAP.UTILS
 {
     public class Utils
     {
@@ -170,6 +171,71 @@ namespace FORMEDO.UTILS
         public static T GetAttributeFromTargetOrPreImage<T>(string logicalName, Entity target, Entity preImage)
         {
             return target.Contains(logicalName) ? target.GetAttributeValue<T>(logicalName) : preImage.GetAttributeValue<T>(logicalName);
+        }
+
+        public class RandomUrlGenerator
+        {
+            private static Random random = new Random();
+
+            public static string GenerateRandomUrl()
+            {
+                string[] protocols = { "http", "https" };
+                string[] domains = { "teams", "teams.microsoft", "microsoft.teams", "microsoft" };
+                string[] tlds = { "com", "org", "net", "io" };
+
+                StringBuilder urlBuilder = new StringBuilder();
+
+                // Protocollo
+                urlBuilder.Append(protocols[random.Next(protocols.Length)]);
+                urlBuilder.Append("://");
+
+                // Sottodominio (opzionale)
+                if (random.Next(2) == 0)
+                {
+                    urlBuilder.Append(GenerateRandomString(3, 7));
+                    urlBuilder.Append(".");
+                }
+
+                // Dominio
+                urlBuilder.Append(domains[random.Next(domains.Length)]);
+                urlBuilder.Append(".");
+                urlBuilder.Append(tlds[random.Next(tlds.Length)]);
+
+                // Percorso (opzionale)
+                if (random.Next(2) == 0)
+                {
+                    int segments = random.Next(1, 4);
+                    for (int i = 0; i < segments; i++)
+                    {
+                        urlBuilder.Append("/");
+                        urlBuilder.Append(GenerateRandomString(3, 10));
+                    }
+                }
+
+                // Parametri di query (opzionali)
+                if (random.Next(2) == 0)
+                {
+                    urlBuilder.Append("?");
+                    int parameters = random.Next(1, 4);
+                    for (int i = 0; i < parameters; i++)
+                    {
+                        if (i > 0) urlBuilder.Append("&");
+                        urlBuilder.Append(GenerateRandomString(2, 5));
+                        urlBuilder.Append("=");
+                        urlBuilder.Append(GenerateRandomString(2, 8));
+                    }
+                }
+
+                return urlBuilder.ToString();
+            }
+
+            private static string GenerateRandomString(int minLength, int maxLength)
+            {
+                int length = random.Next(minLength, maxLength + 1);
+                const string chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+                return new string(Enumerable.Repeat(chars, length)
+                    .Select(s => s[random.Next(s.Length)]).ToArray());
+            }
         }
     }
 }

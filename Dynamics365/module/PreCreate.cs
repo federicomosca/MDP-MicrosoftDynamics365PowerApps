@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace RSMNG.FORMEDO.MODULE
+namespace FM.PAP.MODULE
 {
     public class PreCreate : IPlugin
     {

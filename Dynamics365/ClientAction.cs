@@ -9,9 +9,9 @@ using System.Runtime.InteropServices;
 using System.ServiceModel;
 using System.Text;
 using System.Threading.Tasks;
-using static RSMNG.FORMEDO.CLIENTACTION.ClientAction;
+using static FM.PAP.CLIENTACTION.ClientAction;
 
-namespace RSMNG.FORMEDO.CLIENTACTION
+namespace FM.PAP.CLIENTACTION
 {
     public class ClientAction : IPlugin
     {

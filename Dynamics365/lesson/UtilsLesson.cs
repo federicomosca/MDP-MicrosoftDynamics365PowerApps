@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace RSMNG.FORMEDO.LESSON
+namespace FM.PAP.LESSON
 {
     public class UtilsLesson
     {
@@ -12,7 +12,6 @@ namespace RSMNG.FORMEDO.LESSON
                     {
                         { "res_moduleid", "Modulo" },
                         { "res_courseid", "Corso" },
-                        { "res_classroomid", "Aula" },
                         { "res_sessionmode", "Modalità" },
                         { "res_inpersonparticipation", "Partecipazione In Presenza" },
                         { "res_intendeddate", "Data Prevista" },

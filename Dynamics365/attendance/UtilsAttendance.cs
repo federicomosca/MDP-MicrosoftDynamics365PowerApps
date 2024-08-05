@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace RSMNG.FORMEDO.LESSON
+namespace FM.PAP.LESSON
 {
     public class UtilsAttendance
     {

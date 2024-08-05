@@ -1,17 +1,18 @@
-﻿using RSMNG.FORMEDO.LESSON;
-using FORMEDO.UTILS;
+﻿using FM.PAP.LESSON;
+using FM.PAP.UTILS;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Policy;
 using System.ServiceModel;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace RSMNG.FORMEDO.ATTENDANCE
+namespace FM.PAP.ATTENDANCE
 {
-    public class PostCreate : IPlugin
+    public class PreCreate : IPlugin
     {
         public void Execute(IServiceProvider serviceProvider)
         {
@@ -30,39 +31,49 @@ namespace RSMNG.FORMEDO.ATTENDANCE
                 IOrganizationService service = serviceFactory.CreateOrganizationService(context.UserId);
                 try
                 {
-                    tracingService.Trace("non mi rompo fin qui");
-
                     Utils.CheckMandatoryFieldsOnCreate(UtilsAttendance.mandatoryFields, target);
 
                     EntityReference erLesson = target.GetAttributeValue<EntityReference>("res_classroombooking");
-                    Entity lesson = service.Retrieve("res_classroombooking", erLesson.Id, new ColumnSet("res_code", "res_classroomid", "res_takenseats", "res_availableseats", "res_attendees", "res_inpersonparticipation"));
+                    ColumnSet lessonColumnSet = new ColumnSet("res_code", "res_classroomid", "res_inpersonparticipation", "res_takenseats", "res_availableseats", "res_attendees", "res_inpersonparticipation", "res_remoteparticipationurl");
+                    Entity lesson = service.Retrieve("res_classroombooking", erLesson.Id, lessonColumnSet);
 
                     EntityReference erAttendee = target.GetAttributeValue<EntityReference>("res_subscriberid");
                     Entity attendee = service.Retrieve("res_subscriber", erAttendee.Id, new ColumnSet("res_fullname"));
 
-                    EntityReference erClassroom = lesson["res_classroomid"] != null ? lesson.GetAttributeValue<EntityReference>("res_classroomid") : null;
-                    Entity classroom = service.Retrieve("res_classroom", erClassroom.Id, new ColumnSet("res_seats"));
-                    int classroomSeats = classroom.GetAttributeValue<int>("res_seats");
+                    EntityReference erClassroom = lesson.Contains("res_classroomid") && lesson.GetAttributeValue<EntityReference>("res_classroomid") != null ? lesson.GetAttributeValue<EntityReference>("res_classroomid") : null;
+                    Entity classroom = erClassroom != null ? service.Retrieve("res_classroom", erClassroom.Id, new ColumnSet("res_seats")) : null;
 
-                    #region AGGIORNO NELLA LEZIONE IL NUMERO DI POSTI DISPONIBILI E PARTECIPANTI
-                    tracingService.Trace("non mi rompo fin qui");
-
+                    int classroomSeats = classroom != null ? classroom.GetAttributeValue<int>("res_seats") : 0;
                     int attendees = lesson.GetAttributeValue<int?>("res_attendees") ?? 0;
                     int availableSeats = lesson.GetAttributeValue<int?>("res_availableseats") ?? 0;
                     int takenSeats = lesson.GetAttributeValue<int?>("res_takenseats") ?? 0;
 
-                    if (takenSeats < classroomSeats)
-                    {
-                        tracingService.Trace("non mi rompo fin qui");
+                    #region GENERO IL CODICE
+                    string[] codeSegments = new string[2];
+                    codeSegments[0] = lesson["res_code"] != null ? lesson.GetAttributeValue<string>("res_code") : string.Empty;
+                    codeSegments[1] = attendee["res_fullname"] != null ? attendee.GetAttributeValue<string>("res_fullname") : string.Empty;
 
-                        lesson["res_takenseats"] = takenSeats++;
-                        lesson["res_availableseats"] = classroomSeats - takenSeats;
-                    }
-
-                    lesson["res_attendees"] = attendees + 1;
-                    tracingService.Trace("non mi rompo fin qui");
-                    service.Update(lesson);
+                    target["res_code"] = UtilsAttendance.GenerateCode(codeSegments);
                     #endregion
+
+                    #region DETERMINO LA MODALITÀ DI PARTECIPAZIONE DEGLI ISCRITTI ALLA LEZIONE
+                    bool isMandatoryInPerson = lesson.Contains("res_inpersonparticipation") ? lesson.GetAttributeValue<bool>("res_inpersonparticipation") : false;
+
+                    if (takenSeats == classroomSeats)
+                    {
+                        if (target.GetAttributeValue<string>("res_remoteparticipationurl") == null)
+                        {
+                            string remoteParticipationUrl = Utils.RandomUrlGenerator.GenerateRandomUrl();
+                            target["res_remoteparticipationurl"] = remoteParticipationUrl;
+                        }
+                        target["res_participationmode"] = false;
+                    }
+                    else
+                    {
+                        if (isMandatoryInPerson) target["res_participationmode"] = true;
+                    }
+                    #endregion
+
                 }
                 catch (FaultException<OrganizationServiceFault> ex)
                 {
@@ -80,6 +91,5 @@ namespace RSMNG.FORMEDO.ATTENDANCE
                 }
             }
         }
-
     }
 }
