@@ -171,6 +171,7 @@
     <Compile Include="attendance\PostDelete.cs" />
     <Compile Include="attendance\PostCreate.cs" />
     <Compile Include="attendance\PreCreate.cs" />
+    <Compile Include="attendance\PreUpdate.cs" />
     <Compile Include="attendance\UtilsAttendance.cs" />
     <Compile Include="ClientAction.cs" />
     <Compile Include="lesson\PostUpdate.cs" />

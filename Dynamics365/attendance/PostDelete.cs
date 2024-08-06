@@ -45,13 +45,17 @@ namespace FM.PAP.ATTENDANCE
                         int attendees = lesson.GetAttributeValue<int?>("res_attendees") ?? 0;
                         int remoteAttendees = lesson.GetAttributeValue<int?>("res_remoteattendees") ?? 0;
 
-                        if (availableSeats < classroomSeats)
+                        lesson["res_attendees"] = --attendees;
+
+                        if (!participationMode)
+                        {
+                            lesson["res_remoteattendees"] = --remoteAttendees;
+                        }
+                        else
                         {
                             lesson["res_takenseats"] = --takenSeats;
                             lesson["res_availableseats"] = classroomSeats - takenSeats;
                         }
-                        if (!participationMode) lesson["res_remoteattendees"] = --remoteAttendees;
-                        lesson["res_attendees"] = --attendees;
 
                         service.Update(lesson);
                         #endregion
