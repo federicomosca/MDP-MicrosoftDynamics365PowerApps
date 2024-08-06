@@ -92,7 +92,6 @@ if (typeof (FM.PAP.ATTENDANCE) == "undefined") {
         const lesson = formContext.getAttribute(fields.lesson).getValue();
         const participationModeControl = formContext.getControl(fields.participationMode);
         let classroomSeats;
-        let sessionMode;
         let isInPersonMandatory;
 
         /**
@@ -101,6 +100,7 @@ if (typeof (FM.PAP.ATTENDANCE) == "undefined") {
          */
         if (lesson) {
             const lessonId = formContext.getAttribute(fields.lesson).getValue()[0].id;
+            let sessionMode;
             Xrm.WebApi.retrieveRecord("res_classroombooking", lessonId, "?$select=_res_classroomid_value, res_sessionmode, res_inpersonparticipation").then(
                 lesson => {
                     sessionMode = lesson["res_sessionmode"];

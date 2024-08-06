@@ -17,7 +17,6 @@ namespace FM.PAP.ATTENDANCE
         {
             ITracingService tracingService =
             (ITracingService)serviceProvider.GetService(typeof(ITracingService));
-
             IPluginExecutionContext context = (IPluginExecutionContext)
             serviceProvider.GetService(typeof(IPluginExecutionContext));
 
@@ -31,7 +30,6 @@ namespace FM.PAP.ATTENDANCE
                     if (preImage.Contains("res_classroombooking") && preImage["res_classroombooking"] is EntityReference erLesson)
                     {
                         Entity lesson = service.Retrieve("res_classroombooking", erLesson.Id, new ColumnSet("res_classroomid", "res_takenseats", "res_availableseats", "res_attendees", "res_remoteattendees"));
-
                         EntityReference erClassroom = lesson.Contains("res_classroomid") ? lesson.GetAttributeValue<EntityReference>("res_classroomid") : null;
                         Entity classroom = erClassroom != null ? service.Retrieve("res_classroom", erClassroom.Id, new ColumnSet("res_seats")) : null;
 
@@ -53,11 +51,48 @@ namespace FM.PAP.ATTENDANCE
                         }
                         else
                         {
-                            lesson["res_takenseats"] = --takenSeats;
-                            lesson["res_availableseats"] = classroomSeats - takenSeats;
+                            --takenSeats;
+                            lesson["res_takenseats"] = takenSeats;
+                            availableSeats = classroomSeats - takenSeats;
+                            lesson["res_availableseats"] = availableSeats;
+                            service.Update(lesson);
+
+                            if (availableSeats > 0)
+                            {
+                                /**
+                                 * se cancello un record di un iscritto 'in-person' e si libera un posto
+                                 * trasformo il mio primo record 'remote' in 'in-person' e gli mando una mail di notifica
+                                 */
+                                var fetchLastRemoteAttendee = $@"<?xml version=""1.0"" encoding=""utf-16""?>
+                                                                <fetch top=""1"">
+                                                                  <entity name=""res_attendance"">
+                                                                    <filter>
+                                                                      <condition attribute=""statecode"" operator=""eq"" value=""0"" />
+                                                                      <condition attribute=""res_classroombooking"" operator=""eq"" value=""{erLesson.Id}"" />
+                                                                      <condition attribute=""res_participationmode"" operator=""eq"" value=""0"" />
+                                                                    </filter>
+                                                                    <order attribute=""createdon"" descending=""true"" />
+                                                                  </entity>
+                                                                </fetch>";
+
+                                EntityCollection results = service.RetrieveMultiple(new FetchExpression(fetchLastRemoteAttendee));
+
+                                if (results.Entities.Count() > 0)
+                                {
+                                    Entity lastRemoteAttendee = results.Entities[0];
+                                    lastRemoteAttendee["res_participationmode"] = true;
+                                    service.Update(lastRemoteAttendee);
+
+                                    lesson["res_remoteattendees"] = --remoteAttendees;
+                                    lesson["res_takenseats"] = ++takenSeats;
+                                    lesson["res_availableseats"] = classroomSeats - takenSeats;
+                                }
+                            }
                         }
 
                         service.Update(lesson);
+
+
                         #endregion
                     }
                     else
