@@ -1,5 +1,4 @@
-﻿using FM.PAP.LESSON;
-using FM.PAP.UTILS;
+﻿using FM.PAP.UTILS;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
 using System;
@@ -8,11 +7,10 @@ using System.Linq;
 using System.ServiceModel;
 using System.Text;
 using System.Threading.Tasks;
-using System.Security.Policy;
 
-namespace FM.PAP.ATTENDANCE
+namespace Dynamics365.attendance
 {
-    public class PostCreate : IPlugin
+    public class PostUpdate : IPlugin
     {
         public void Execute(IServiceProvider serviceProvider)
         {
@@ -26,22 +24,19 @@ namespace FM.PAP.ATTENDANCE
                 context.InputParameters["Target"] is Entity)
             {
                 Entity target = (Entity)context.InputParameters["Target"];
+                Entity preImage = (Entity)context.PreEntityImages["PreImage"];
 
                 IOrganizationServiceFactory serviceFactory = (IOrganizationServiceFactory)serviceProvider.GetService(typeof(IOrganizationServiceFactory));
                 IOrganizationService service = serviceFactory.CreateOrganizationService(context.UserId);
                 try
                 {
-                    Utils.CheckMandatoryFieldsOnCreate(UtilsAttendance.mandatoryFields, target);
-
-                    EntityReference erLesson = target.GetAttributeValue<EntityReference>("res_classroombooking");
+                    EntityReference erLesson = Utils.GetAttributeFromTargetOrPreImage<EntityReference>("res_classroombooking", target, preImage);
                     Entity lesson = service.Retrieve("res_classroombooking", erLesson.Id, new ColumnSet("res_classroomid"));
 
-                    EntityReference erClassroom = lesson.Contains("res_classroomid") && lesson.GetAttributeValue<EntityReference>("res_classroomid") != null ? lesson.GetAttributeValue<EntityReference>("res_classroomid") : null;
+                    EntityReference erClassroom = lesson.Contains("res_classroomid") ? lesson.GetAttributeValue<EntityReference>("res_classroomid") : null;
                     Entity classroom = erClassroom != null ? service.Retrieve("res_classroom", erClassroom.Id, new ColumnSet("res_seats")) : null;
 
-                    #region AGGIORNO NELLA LEZIONE IL NUMERO DI POSTI DISPONIBILI E PARTECIPANTI
-
-                    int classroomSeats = classroom != null ? classroom.GetAttributeValue<int>("res_seats") : 0;
+                    int classroomSeats = classroom?.GetAttributeValue<int?>("res_seats") ?? 0;
 
                     var fetchInPersonAttendancesCount = $@"<?xml version=""1.0"" encoding=""utf-16""?>
                                     <fetch returntotalrecordcount=""true"">
@@ -76,15 +71,7 @@ namespace FM.PAP.ATTENDANCE
                     lesson["res_availableseats"] = classroomSeats - inPersonAttendancesCount;
                     lesson["res_remoteattendees"] = remoteAttendancesCount;
 
-
-                    if (inPersonAttendancesCount > classroomSeats)
-                    {
-                        string remoteParticipationUrl = Utils.RandomUrlGenerator.GenerateRandomUrl();
-                        lesson["res_remoteparticipationurl"] = remoteParticipationUrl;
-                    }
-
                     service.Update(lesson);
-                    #endregion
                 }
                 catch (FaultException<OrganizationServiceFault> ex)
                 {
@@ -92,16 +79,13 @@ namespace FM.PAP.ATTENDANCE
                 }
                 catch (ApplicationException ex)
                 {
-                    tracingService.Trace("ApplicationException: {0}", ex.ToString());
                     throw new InvalidPluginExecutionException(ex.Message);
                 }
                 catch (Exception ex)
                 {
-                    tracingService.Trace("FollowUpPlugin: {0}", ex.ToString());
                     throw ex;
                 }
             }
         }
-
     }
 }

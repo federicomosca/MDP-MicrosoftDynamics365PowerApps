@@ -32,7 +32,8 @@ namespace FM.PAP.ATTENDANCE
                 {
                     if (preImage.Contains("res_classroombooking") && preImage["res_classroombooking"] is EntityReference erLesson)
                     {
-                        Entity lesson = service.Retrieve("res_classroombooking", erLesson.Id, new ColumnSet("res_code", "res_classroomid", "res_takenseats", "res_availableseats", "res_attendees", "res_remoteattendees"));
+                        Entity lesson = service.Retrieve("res_classroombooking", erLesson.Id, new ColumnSet("res_code", "res_classroomid"));
+
                         EntityReference erClassroom = lesson.Contains("res_classroomid") ? lesson.GetAttributeValue<EntityReference>("res_classroomid") : null;
                         Entity classroom = erClassroom != null ? service.Retrieve("res_classroom", erClassroom.Id, new ColumnSet("res_seats")) : null;
 
@@ -41,27 +42,43 @@ namespace FM.PAP.ATTENDANCE
                         #region AGGIORNO NELLA LEZIONE IL NUMERO DI POSTI DISPONIBILI E PARTECIPANTI
 
                         int classroomSeats = classroom?.GetAttributeValue<int?>("res_seats") ?? 0;
-                        string lessonCode = lesson.GetAttributeValue<string>("res_code") ?? string.Empty;
-                        int takenSeats = lesson.GetAttributeValue<int?>("res_takenseats") ?? 0;
-                        int availableSeats = lesson.GetAttributeValue<int?>("res_availableseats") ?? 0;
-                        int attendees = lesson.GetAttributeValue<int?>("res_attendees") ?? 0;
-                        int remoteAttendees = lesson.GetAttributeValue<int?>("res_remoteattendees") ?? 0;
 
-                        lesson["res_attendees"] = --attendees;
+                        var fetchInPersonAttendancesCount = $@"<?xml version=""1.0"" encoding=""utf-16""?>
+                                    <fetch returntotalrecordcount=""true"">
+                                      <entity name=""res_attendance"">
+                                        <filter>
+                                          <condition attribute=""statecode"" operator=""eq"" value=""0"" />
+                                          <condition attribute=""res_classroombooking"" operator=""eq"" value=""{erLesson.Id}"" />
+                                          <condition attribute=""res_participationmode"" operator=""eq"" value=""1"" />
+                                        </filter>
+                                      </entity>
+                                    </fetch>";
 
-                        if (!participationMode)
+                        var fetchRemoteAttendancesCount = $@"<?xml version=""1.0"" encoding=""utf-16""?>
+                                    <fetch returntotalrecordcount=""true"">
+                                      <entity name=""res_attendance"">
+                                        <filter>
+                                          <condition attribute=""statecode"" operator=""eq"" value=""0"" />
+                                          <condition attribute=""res_classroombooking"" operator=""eq"" value=""{erLesson.Id}"" />
+                                          <condition attribute=""res_participationmode"" operator=""eq"" value=""0"" />
+                                        </filter>
+                                      </entity>
+                                    </fetch>";
+
+                        EntityCollection inPersonAttendances = service.RetrieveMultiple(new FetchExpression(fetchInPersonAttendancesCount));
+                        EntityCollection remoteAttendances = service.RetrieveMultiple(new FetchExpression(fetchRemoteAttendancesCount));
+
+                        int inPersonAttendancesCount = inPersonAttendances.TotalRecordCount != -1 ? inPersonAttendances.TotalRecordCount : 0;
+                        int remoteAttendancesCount = remoteAttendances.TotalRecordCount != -1 ? remoteAttendances.TotalRecordCount : 0;
+
+                        lesson["res_attendees"] = inPersonAttendancesCount + remoteAttendancesCount;
+                        lesson["res_remoteattendees"] = remoteAttendancesCount;
+                        lesson["res_takenseats"] = inPersonAttendancesCount;
+                        lesson["res_availableseats"] = classroomSeats - inPersonAttendancesCount;
+
+                        if (participationMode)
                         {
-                            lesson["res_remoteattendees"] = --remoteAttendees;
-                        }
-                        else
-                        {
-                            --takenSeats;
-                            lesson["res_takenseats"] = takenSeats;
-                            availableSeats = classroomSeats - takenSeats;
-                            lesson["res_availableseats"] = availableSeats;
-                            service.Update(lesson);
-
-                            if (availableSeats > 0)
+                            if (inPersonAttendancesCount < classroomSeats)
                             {
                                 /**
                                  * se cancello un record di un iscritto 'in-person' e si libera un posto
@@ -70,6 +87,7 @@ namespace FM.PAP.ATTENDANCE
                                 var fetchFirstRemoteAttendees = $@"<?xml version=""1.0"" encoding=""utf-16""?>
                                                                 <fetch>
                                                                   <entity name=""res_attendance"">
+                                                                    <attribute name=""res_attendanceid"" />
                                                                     <filter>
                                                                       <condition attribute=""statecode"" operator=""eq"" value=""0"" />
                                                                       <condition attribute=""res_classroombooking"" operator=""eq"" value=""{erLesson.Id}"" />
@@ -93,31 +111,29 @@ namespace FM.PAP.ATTENDANCE
                                     {
                                         string subscriberFullName = firstRemoteAttendee.GetAttributeValue<AliasedValue>("linkedSubscriber.res_fullname")?.Value as string;
                                         string contactEmail = firstRemoteAttendee.GetAttributeValue<AliasedValue>("linkedContact.emailaddress1")?.Value as string;
+                                        string lessonCode = lesson.GetAttributeValue<string>("res_code") ?? string.Empty;
+                                        string classroomName = string.Empty;
+                                        string lessonTitle = string.Empty;
+                                        string date = string.Empty;
 
-                                        tracingService.Trace($"{subscriberFullName}, {contactEmail}");
+                                        if (lessonCode != string.Empty)
+                                        {
+                                            classroomName = lessonCode.Split('-')[0].Trim();
+                                            lessonTitle = lessonCode.Split('-')[1].Trim();
+                                            date = lessonCode.Split('-')[2].Trim();
+                                        }
 
-                                        var task = Task.Run(async () => await CallPowerAutomateFlow(tracingService, subscriberFullName, contactEmail, lessonCode));
+                                        string attendanceId = firstRemoteAttendee.GetAttributeValue<Guid>("res_attendanceid").ToString();
+
+                                        var task = Task.Run(async () => await CallPowerAutomateFlow(tracingService, subscriberFullName, contactEmail, classroomName, lessonTitle, date, attendanceId));
 
                                         task.Wait();
-
-                                        
-                                        if (task.IsCompleted)
-                                        {
-                                            firstRemoteAttendee["res_participationmode"] = true;
-                                            service.Update(firstRemoteAttendee);
-
-                                            lesson["res_remoteattendees"] = --remoteAttendees;
-                                            lesson["res_takenseats"] = ++takenSeats;
-                                            lesson["res_availableseats"] = classroomSeats - takenSeats;
-                                            break;
-                                        }
                                     }
                                 }
                             }
                         }
 
                         service.Update(lesson);
-
 
                         #endregion
                     }
@@ -146,7 +162,7 @@ namespace FM.PAP.ATTENDANCE
                 tracingService.Trace("PreImage non trovato nel contesto.");
             }
         }
-        private async Task CallPowerAutomateFlow(ITracingService tracingService, string subscriberFullName, string contactEmail, string lessonCode)
+        private async Task CallPowerAutomateFlow(ITracingService tracingService, string subscriberFullName, string contactEmail, string classroomName, string lessonTitle, string date, string attendanceId)
         {
             string flowUrl = "https://prod-29.northeurope.logic.azure.com:443/workflows/6e131085e906484fa2d0dc74ea775786/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=-T1DGUsteF9r6Eok-ahXSP4ex-pNs6J5uMH145J7XzQ";
 
@@ -160,7 +176,10 @@ namespace FM.PAP.ATTENDANCE
                     {
                         subscriberFullName,
                         contactEmail,
-                        lessonCode
+                        classroomName,
+                        lessonTitle,
+                        date,
+                        attendanceId
                     };
                     var json = JsonConvert.SerializeObject(data);
                     var content = new StringContent(json, Encoding.UTF8, "application/json");
