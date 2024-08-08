@@ -84,9 +84,7 @@ namespace FM.PAP.ATTENDANCE
                                                                     <order attribute=""createdon"" />
                                                                     <link-entity name=""res_subscriber"" from=""res_subscriberid"" to=""res_subscriberid"" alias=""linkedSubscriber"">
                                                                       <attribute name=""res_fullname"" />
-                                                                      <link-entity name=""contact"" from=""contactid"" to=""res_contactid"" alias=""linkedContact"">
-                                                                        <attribute name=""emailaddress1"" />
-                                                                      </link-entity>
+                                                                      <attribute name=""res_emailaddress"" />
                                                                     </link-entity>
                                                                   </entity>
                                                                 </fetch>";
@@ -98,12 +96,12 @@ namespace FM.PAP.ATTENDANCE
                                     foreach (Entity firstRemoteAttendee in results.Entities)
                                     {
                                         string subscriberFullName = firstRemoteAttendee.GetAttributeValue<AliasedValue>("linkedSubscriber.res_fullname")?.Value as string;
-                                        string contactEmail = firstRemoteAttendee.GetAttributeValue<AliasedValue>("linkedContact.emailaddress1")?.Value as string;
+                                        string subscriberEmail = firstRemoteAttendee.GetAttributeValue<AliasedValue>("linkedSubscriber.res_emailaddress")?.Value as string;
                                         string lessonCode = lesson.GetAttributeValue<string>("res_code") ?? string.Empty;
 
                                         string attendanceId = firstRemoteAttendee.GetAttributeValue<Guid>("res_attendanceid").ToString();
 
-                                        var task = Task.Run(async () => await CallPowerAutomateFlow(tracingService, subscriberFullName, contactEmail, lessonCode, attendanceId));
+                                        var task = Task.Run(async () => await CallPowerAutomateFlow(tracingService, subscriberFullName, subscriberEmail, lessonCode, attendanceId));
 
                                         task.Wait();
                                     }
@@ -140,7 +138,7 @@ namespace FM.PAP.ATTENDANCE
                 tracingService.Trace("PreImage non trovato nel contesto.");
             }
         }
-        private async Task CallPowerAutomateFlow(ITracingService tracingService, string subscriberFullName, string contactEmail, string lessonCode, string attendanceId)
+        private async Task CallPowerAutomateFlow(ITracingService tracingService, string subscriberFullName, string subscriberEmail, string lessonCode, string attendanceId)
         {
             string flowUrl = "https://prod-29.northeurope.logic.azure.com:443/workflows/6e131085e906484fa2d0dc74ea775786/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=-T1DGUsteF9r6Eok-ahXSP4ex-pNs6J5uMH145J7XzQ";
 
@@ -153,7 +151,7 @@ namespace FM.PAP.ATTENDANCE
                     var data = new
                     {
                         subscriberFullName,
-                        contactEmail,
+                        subscriberEmail,
                         lessonCode,
                         attendanceId
                     };

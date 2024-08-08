@@ -86,11 +86,6 @@ namespace FM.PAP.ATTENDANCE
                     }
                     else
                     {
-                        if (target.GetAttributeValue<string>("res_remoteparticipationurl") == null)
-                        {
-                            string remoteParticipationUrl = Utils.RandomUrlGenerator.GenerateRandomUrl();
-                            target["res_remoteparticipationurl"] = remoteParticipationUrl;
-                        }
                         /**
                          * se non ci sono posti = false
                          * se la presenza in aula è obbligatoria, però,
