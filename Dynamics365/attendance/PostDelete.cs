@@ -43,33 +43,21 @@ namespace FM.PAP.ATTENDANCE
 
                         int classroomSeats = classroom?.GetAttributeValue<int?>("res_seats") ?? 0;
 
-                        var fetchInPersonAttendancesCount = $@"<?xml version=""1.0"" encoding=""utf-16""?>
-                                    <fetch returntotalrecordcount=""true"">
-                                      <entity name=""res_attendance"">
-                                        <filter>
-                                          <condition attribute=""statecode"" operator=""eq"" value=""0"" />
-                                          <condition attribute=""res_classroombooking"" operator=""eq"" value=""{erLesson.Id}"" />
-                                          <condition attribute=""res_participationmode"" operator=""eq"" value=""1"" />
-                                        </filter>
-                                      </entity>
-                                    </fetch>";
+                        var fetchAttendancesCount = $@"<?xml version=""1.0"" encoding=""utf-16""?>
+                                                <fetch returntotalrecordcount=""true"">
+                                                  <entity name=""res_attendance"">
+                                                    <attribute name=""res_participationmode"" />
+                                                    <filter>
+                                                      <condition attribute=""statecode"" operator=""eq"" value=""0"" />
+                                                      <condition attribute=""res_classroombooking"" operator=""eq"" value=""{erLesson.Id}"" />
+                                                    </filter>
+                                                  </entity>
+                                                </fetch>";
 
-                        var fetchRemoteAttendancesCount = $@"<?xml version=""1.0"" encoding=""utf-16""?>
-                                    <fetch returntotalrecordcount=""true"">
-                                      <entity name=""res_attendance"">
-                                        <filter>
-                                          <condition attribute=""statecode"" operator=""eq"" value=""0"" />
-                                          <condition attribute=""res_classroombooking"" operator=""eq"" value=""{erLesson.Id}"" />
-                                          <condition attribute=""res_participationmode"" operator=""eq"" value=""0"" />
-                                        </filter>
-                                      </entity>
-                                    </fetch>";
+                        EntityCollection attendances = service.RetrieveMultiple(new FetchExpression(fetchAttendancesCount));
 
-                        EntityCollection inPersonAttendances = service.RetrieveMultiple(new FetchExpression(fetchInPersonAttendancesCount));
-                        EntityCollection remoteAttendances = service.RetrieveMultiple(new FetchExpression(fetchRemoteAttendancesCount));
-
-                        int inPersonAttendancesCount = inPersonAttendances.TotalRecordCount != -1 ? inPersonAttendances.TotalRecordCount : 0;
-                        int remoteAttendancesCount = remoteAttendances.TotalRecordCount != -1 ? remoteAttendances.TotalRecordCount : 0;
+                        int inPersonAttendancesCount = attendances.Entities.Count(attendance => attendance.GetAttributeValue<bool>("res_participationmode") == true);
+                        int remoteAttendancesCount = attendances.Entities.Count(attendance => attendance.GetAttributeValue<bool>("res_participationmode") == false);
 
                         lesson["res_attendees"] = inPersonAttendancesCount + remoteAttendancesCount;
                         lesson["res_remoteattendees"] = remoteAttendancesCount;
@@ -112,20 +100,10 @@ namespace FM.PAP.ATTENDANCE
                                         string subscriberFullName = firstRemoteAttendee.GetAttributeValue<AliasedValue>("linkedSubscriber.res_fullname")?.Value as string;
                                         string contactEmail = firstRemoteAttendee.GetAttributeValue<AliasedValue>("linkedContact.emailaddress1")?.Value as string;
                                         string lessonCode = lesson.GetAttributeValue<string>("res_code") ?? string.Empty;
-                                        string classroomName = string.Empty;
-                                        string lessonTitle = string.Empty;
-                                        string date = string.Empty;
-
-                                        if (lessonCode != string.Empty)
-                                        {
-                                            classroomName = lessonCode.Split('-')[0].Trim();
-                                            lessonTitle = lessonCode.Split('-')[1].Trim();
-                                            date = lessonCode.Split('-')[2].Trim();
-                                        }
 
                                         string attendanceId = firstRemoteAttendee.GetAttributeValue<Guid>("res_attendanceid").ToString();
 
-                                        var task = Task.Run(async () => await CallPowerAutomateFlow(tracingService, subscriberFullName, contactEmail, classroomName, lessonTitle, date, attendanceId));
+                                        var task = Task.Run(async () => await CallPowerAutomateFlow(tracingService, subscriberFullName, contactEmail, lessonCode, attendanceId));
 
                                         task.Wait();
                                     }
@@ -162,7 +140,7 @@ namespace FM.PAP.ATTENDANCE
                 tracingService.Trace("PreImage non trovato nel contesto.");
             }
         }
-        private async Task CallPowerAutomateFlow(ITracingService tracingService, string subscriberFullName, string contactEmail, string classroomName, string lessonTitle, string date, string attendanceId)
+        private async Task CallPowerAutomateFlow(ITracingService tracingService, string subscriberFullName, string contactEmail, string lessonCode, string attendanceId)
         {
             string flowUrl = "https://prod-29.northeurope.logic.azure.com:443/workflows/6e131085e906484fa2d0dc74ea775786/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=-T1DGUsteF9r6Eok-ahXSP4ex-pNs6J5uMH145J7XzQ";
 
@@ -176,9 +154,7 @@ namespace FM.PAP.ATTENDANCE
                     {
                         subscriberFullName,
                         contactEmail,
-                        classroomName,
-                        lessonTitle,
-                        date,
+                        lessonCode,
                         attendanceId
                     };
                     var json = JsonConvert.SerializeObject(data);

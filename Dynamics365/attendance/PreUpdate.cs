@@ -30,15 +30,6 @@ namespace FM.PAP.ATTENDANCE
                 IOrganizationService service = serviceFactory.CreateOrganizationService(context.UserId);
                 try
                 {
-                    //Utils.CheckMandatoryFieldsOnUpdate(UtilsAttendance.mandatoryFields, target);
-
-                    //EntityReference erLesson = Utils.GetAttributeFromTargetOrPreImage<EntityReference>("res_classroombookingid", target, preImage);
-                    //Entity lesson = service.Retrieve("res_classroombooking", erLesson.Id, new ColumnSet("res_sessionmode", "res_inpersonparticipation"));
-                    //bool? sessionMode = lesson.GetAttributeValue<bool?>("res_sessionmode") ?? null;
-                    //bool? isInPersonMandatory = lesson.GetAttributeValue<bool?>("res_inpersonparticipation") ?? null;
-
-                    //bool participationMode = Utils.GetAttributeFromTargetOrPreImage<bool>("res_participationmode")
-
 
                 }
                 catch (FaultException<OrganizationServiceFault> ex)

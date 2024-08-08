@@ -2,9 +2,12 @@
 using FM.PAP.UTILS;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http.Headers;
+using System.Net.Http;
 using System.Security.Policy;
 using System.ServiceModel;
 using System.Text;
@@ -44,9 +47,22 @@ namespace FM.PAP.ATTENDANCE
                     Entity classroom = erClassroom != null ? service.Retrieve("res_classroom", erClassroom.Id, new ColumnSet("res_seats")) : null;
 
                     int classroomSeats = classroom != null ? classroom.GetAttributeValue<int>("res_seats") : 0;
-                    int attendees = lesson.GetAttributeValue<int?>("res_attendees") ?? 0;
-                    int availableSeats = lesson.GetAttributeValue<int?>("res_availableseats") ?? 0;
-                    int takenSeats = lesson.GetAttributeValue<int?>("res_takenseats") ?? 0;
+
+                    var fetchAttendancesCount = $@"<?xml version=""1.0"" encoding=""utf-16""?>
+                                                <fetch returntotalrecordcount=""true"">
+                                                  <entity name=""res_attendance"">
+                                                    <attribute name=""res_participationmode"" />
+                                                    <filter>
+                                                      <condition attribute=""statecode"" operator=""eq"" value=""0"" />
+                                                      <condition attribute=""res_classroombooking"" operator=""eq"" value=""{erLesson.Id}"" />
+                                                    </filter>
+                                                  </entity>
+                                                </fetch>";
+
+                    EntityCollection attendances = service.RetrieveMultiple(new FetchExpression(fetchAttendancesCount));
+
+                    int inPersonAttendancesCount = attendances.Entities.Count(attendance => attendance.GetAttributeValue<bool>("res_participationmode") == true);
+                    int remoteAttendancesCount = attendances.Entities.Count(attendance => attendance.GetAttributeValue<bool>("res_participationmode") == false);
 
                     #region GENERO IL CODICE
                     string[] codeSegments = new string[2];
@@ -57,23 +73,58 @@ namespace FM.PAP.ATTENDANCE
                     #endregion
 
                     #region DETERMINO LA MODALITÀ DI PARTECIPAZIONE DEGLI ISCRITTI ALLA LEZIONE
-                    bool isMandatoryInPerson = lesson.Contains("res_inpersonparticipation") ? lesson.GetAttributeValue<bool>("res_inpersonparticipation") : false;
+                    bool isMandatoryInPerson = lesson.GetAttributeValue<bool>("res_inpersonparticipation");
 
-                    if (takenSeats == classroomSeats)
+                    if (inPersonAttendancesCount < classroomSeats)
+                    {
+                        /**
+                         * se è obbligatoria la presenza = true
+                         * altrimenti l'utente può scegliere ma di default è true
+                         * per incoraggiare a partecipare in presenza
+                         */
+                        if (isMandatoryInPerson) target["res_participationmode"] = true;
+                    }
+                    else
                     {
                         if (target.GetAttributeValue<string>("res_remoteparticipationurl") == null)
                         {
                             string remoteParticipationUrl = Utils.RandomUrlGenerator.GenerateRandomUrl();
                             target["res_remoteparticipationurl"] = remoteParticipationUrl;
                         }
+                        /**
+                         * se non ci sono posti = false
+                         * se la presenza in aula è obbligatoria, però,
+                         * viene inviata una mail all'utente per avvertirlo che i posti sono esauriti
+                         * e che potrebbero liberarsene in futuro e gli verrà notificato sempre per mail
+                         */
                         target["res_participationmode"] = false;
-                    }
-                    else
-                    {
-                        if (isMandatoryInPerson) target["res_participationmode"] = true;
+
+                        if (isMandatoryInPerson)
+                        {
+                            string subscriberFullName;
+                            string subscriberEmail;
+                            string lessonCode;
+
+                            EntityReference erSubscriber = target.GetAttributeValue<EntityReference>("res_subscriberid");
+                            Entity subscriber = erSubscriber != null ? service.Retrieve("res_subscriber", erSubscriber.Id, new ColumnSet("res_fullname", "res_emailaddress")) : null;
+
+                            if (subscriber != null)
+                            {
+                                subscriberFullName = subscriber.GetAttributeValue<string>("res_fullname") ?? string.Empty;
+                                subscriberEmail = subscriber.GetAttributeValue<string>("res_emailaddress") ?? string.Empty;
+                                lessonCode = lesson.GetAttributeValue<string>("res_code") ?? string.Empty;
+
+                                var task = Task.Run(async () => await CallPowerAutomateFlow(tracingService, subscriberFullName, subscriberEmail, lessonCode));
+
+                                task.Wait();
+                            }
+                            else
+                            {
+                                throw new Exception("Subscriber cannot be null");
+                            }
+                        }
                     }
                     #endregion
-
                 }
                 catch (FaultException<OrganizationServiceFault> ex)
                 {
@@ -91,5 +142,43 @@ namespace FM.PAP.ATTENDANCE
                 }
             }
         }
+        private async Task CallPowerAutomateFlow(ITracingService tracingService, string subscriberFullName, string contactEmail, string lessonCode)
+        {
+            string flowUrl = "https://prod-51.northeurope.logic.azure.com:443/workflows/43054e79d1364589a2cca95b0ae5c1bf/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=VGK8qOuaqcaYcOYWgSIO6DH57J-kKxQmsBdwk3-b8wU";
+
+            try
+            {
+                using (HttpClient client = new HttpClient())
+                {
+                    client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+                    var data = new
+                    {
+                        subscriberFullName,
+                        contactEmail,
+                        lessonCode
+                    };
+                    var json = JsonConvert.SerializeObject(data);
+                    var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                    HttpResponseMessage response = await client.PostAsync(flowUrl, content);
+                    string responseContent = await response.Content.ReadAsStringAsync();
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        tracingService.Trace("Power Automate Flow called successfully. Response: {0}", responseContent);
+                    }
+                    else
+                    {
+                        tracingService.Trace("Error calling Power Automate Flow. Status Code: {0}. Response: {1}", response.StatusCode, responseContent);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                tracingService.Trace("Exception occurred while calling Power Automate Flow: {0}", ex.ToString());
+            }
+        }
+
     }
 }

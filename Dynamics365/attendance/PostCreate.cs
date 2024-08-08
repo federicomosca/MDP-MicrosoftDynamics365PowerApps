@@ -43,45 +43,26 @@ namespace FM.PAP.ATTENDANCE
 
                     int classroomSeats = classroom != null ? classroom.GetAttributeValue<int>("res_seats") : 0;
 
-                    var fetchInPersonAttendancesCount = $@"<?xml version=""1.0"" encoding=""utf-16""?>
-                                    <fetch returntotalrecordcount=""true"">
-                                      <entity name=""res_attendance"">
-                                        <filter>
-                                          <condition attribute=""statecode"" operator=""eq"" value=""0"" />
-                                          <condition attribute=""res_classroombooking"" operator=""eq"" value=""{erLesson.Id}"" />
-                                          <condition attribute=""res_participationmode"" operator=""eq"" value=""1"" />
-                                        </filter>
-                                      </entity>
-                                    </fetch>";
+                    var fetchAttendancesCount = $@"<?xml version=""1.0"" encoding=""utf-16""?>
+                                                <fetch returntotalrecordcount=""true"">
+                                                  <entity name=""res_attendance"">
+                                                    <attribute name=""res_participationmode"" />
+                                                    <filter>
+                                                      <condition attribute=""statecode"" operator=""eq"" value=""0"" />
+                                                      <condition attribute=""res_classroombooking"" operator=""eq"" value=""{erLesson.Id}"" />
+                                                    </filter>
+                                                  </entity>
+                                                </fetch>";
 
-                    var fetchRemoteAttendancesCount = $@"<?xml version=""1.0"" encoding=""utf-16""?>
-                                    <fetch returntotalrecordcount=""true"">
-                                      <entity name=""res_attendance"">
-                                        <filter>
-                                          <condition attribute=""statecode"" operator=""eq"" value=""0"" />
-                                          <condition attribute=""res_classroombooking"" operator=""eq"" value=""{erLesson.Id}"" />
-                                          <condition attribute=""res_participationmode"" operator=""eq"" value=""0"" />
-                                        </filter>
-                                      </entity>
-                                    </fetch>";
+                    EntityCollection attendances = service.RetrieveMultiple(new FetchExpression(fetchAttendancesCount));
 
-                    EntityCollection inPersonAttendances = service.RetrieveMultiple(new FetchExpression(fetchInPersonAttendancesCount));
-                    EntityCollection remoteAttendances = service.RetrieveMultiple(new FetchExpression(fetchRemoteAttendancesCount));
-
-                    int inPersonAttendancesCount = inPersonAttendances.TotalRecordCount != -1 ? inPersonAttendances.TotalRecordCount : 0;
-                    int remoteAttendancesCount = remoteAttendances.TotalRecordCount != -1 ? remoteAttendances.TotalRecordCount : 0;
+                    int inPersonAttendancesCount = attendances.Entities.Count(attendance => attendance.GetAttributeValue<bool>("res_participationmode") == true);
+                    int remoteAttendancesCount = attendances.Entities.Count(attendance => attendance.GetAttributeValue<bool>("res_participationmode") == false);
 
                     lesson["res_attendees"] = inPersonAttendancesCount + remoteAttendancesCount;
                     lesson["res_takenseats"] = inPersonAttendancesCount;
                     lesson["res_availableseats"] = classroomSeats - inPersonAttendancesCount;
                     lesson["res_remoteattendees"] = remoteAttendancesCount;
-
-
-                    if (inPersonAttendancesCount > classroomSeats)
-                    {
-                        string remoteParticipationUrl = Utils.RandomUrlGenerator.GenerateRandomUrl();
-                        lesson["res_remoteparticipationurl"] = remoteParticipationUrl;
-                    }
 
                     service.Update(lesson);
                     #endregion
