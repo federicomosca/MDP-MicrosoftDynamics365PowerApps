@@ -214,7 +214,7 @@ if (typeof (FM.PAP.LESSON) == "undefined") {
             if (intendedDate > todayISO) {
                 const moduleField = formContext.getAttribute(fields.module);
                 var moduleId = moduleField && moduleField.getValue() ? (moduleField.getValue()[0].id).replace(/[{}]/g, "") : null;
-                if (moduleId && classroomId) {
+                if (moduleId) {
 
                     const bookingId = formContext.data.entity.getId() ?
                         formContext.data.entity.getId().replace(/[{}]/g, "") : 0;

@@ -50,15 +50,10 @@ namespace FM.PAP.LESSON
                     #endregion
 
                     #region GESTIONE DELLA MODALITÀ DI PARTECIPAZIONE
-                    bool sessionMode = target.GetAttributeValue<bool>("res_sessionmode");
-                    bool inPersonParticipation = target.GetAttributeValue<bool>("res_inpersonparticipation");
+                    bool isInPerson = target.GetAttributeValue<bool>("res_sessionmode");
+                    bool isInPersonMandatory = target.GetAttributeValue<bool>("res_inpersonparticipation");
 
-                    if (!sessionMode) target["res_inpersonparticipation"] = false; //hide field on js
-                    if (sessionMode && !inPersonParticipation)
-                    {
-                        string url = Utils.RandomUrlGenerator.GenerateRandomUrl();
-                        target["res_remoteparticipationurl"] = url;
-                    }
+                    if (!isInPerson) target["res_inpersonparticipation"] = false; //hide field client-side
                     #endregion
                 }
                 catch (FaultException<OrganizationServiceFault> ex)

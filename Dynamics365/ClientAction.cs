@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -9,6 +10,7 @@ using System.Runtime.InteropServices;
 using System.ServiceModel;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using static FM.PAP.CLIENTACTION.ClientAction;
 
 namespace FM.PAP.CLIENTACTION
@@ -351,19 +353,25 @@ namespace FM.PAP.CLIENTACTION
                          * il controllo sulla disponibilità dell'aula nella specifica data avviene contestualmente al corso
                          * a cui appartiene il modulo per la quale si sta effettuando la prenotazione
                          */
-                        if (courseId != Guid.Empty && classroomId != Guid.Empty)
+                        if (courseId != Guid.Empty)
                         {
+                            string inPersonCondition = string.Empty;
                             /*
                              * recupero la data delle eventuali prenotazioni per tutte le lezioni del corso
                              * a cui appartiene la lezione per la quale si sta effettuando la prenotazione
                              * così da evitare sovrapposizioni di prenotazione tra lezioni dello stesso corso
                              */
+                            if (classroomId != Guid.Empty)
+                            {
+                                inPersonCondition = $@"< condition attribute = ""res_classroomid"" operator= ""eq"" value = ""{classroomId}"" />";
+                            }
+
                             var fetchBookingsDates = $@"<?xml version=""1.0"" encoding=""utf-16""?>
                                                         <fetch returntotalrecordcount=""true"">
                                                             <entity name=""res_classroombooking"">
                                                             <filter>
                                                                 <condition attribute=""res_intendeddate"" operator=""eq"" value=""{date}"" />
-                                                                <condition attribute=""res_classroomid"" operator=""eq"" value=""{classroomId}"" />
+                                                                {inPersonCondition}
                                                                 <condition attribute=""res_classroombookingid"" operator=""ne"" value=""{bookingId}"" />
                                                                 <condition attribute=""res_courseid"" operator=""eq"" value=""{courseId}"" />
                                                             </filter>
