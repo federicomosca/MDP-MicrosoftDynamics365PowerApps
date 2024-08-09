@@ -1,4 +1,5 @@
-﻿using FM.PAP.LESSON;
+﻿using FM.PAP.CLIENTACTION;
+using FM.PAP.LESSON;
 using FM.PAP.UTILS;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
@@ -37,7 +38,7 @@ namespace FM.PAP.ATTENDANCE
                         EntityReference erClassroom = lesson.Contains("res_classroomid") ? lesson.GetAttributeValue<EntityReference>("res_classroomid") : null;
                         Entity classroom = erClassroom != null ? service.Retrieve("res_classroom", erClassroom.Id, new ColumnSet("res_seats")) : null;
 
-                        bool participationMode = preImage.GetAttributeValue<bool>("res_participationmode");
+                        bool isInPerson = preImage.GetAttributeValue<bool>("res_participationmode");
 
                         #region AGGIORNO NELLA LEZIONE IL NUMERO DI POSTI DISPONIBILI E PARTECIPANTI
 
@@ -64,10 +65,34 @@ namespace FM.PAP.ATTENDANCE
                         lesson["res_takenseats"] = inPersonAttendancesCount;
                         lesson["res_availableseats"] = classroomSeats - inPersonAttendancesCount;
 
-                        if (participationMode)
+                        if (isInPerson)
                         {
                             if (inPersonAttendancesCount < classroomSeats)
                             {
+
+                                /**
+                                 * CHIAMATA ALLA CUSTOM API CHE TORNA ERRORE: 0x80040265
+                                 */
+
+                                //var request = new OrganizationRequest("NOTIFICATE_LESSON_OPENING");
+
+                                //request["jsonDataInput"] = JsonConvert.SerializeObject(erLesson.Id);
+
+                                //try
+                                //{
+                                //    OrganizationResponse response = service.Execute(request);
+                                //    tracingService.Trace("after calling client action");
+                                //    if (response.Results.Contains("jsonDataOutput"))
+                                //    {
+                                //        tracingService.Trace("response from client action");
+                                //        var outputValue = response.Results["jsonDataOutput"];
+                                //    }
+                                //}
+                                //catch (FaultException<OrganizationServiceFault> ex)
+                                //{
+                                //    throw new InvalidPluginExecutionException($"Errore durante l'esecuzione dell'azione: {ex.Message}");
+                                //}
+
                                 /**
                                  * se cancello un record di un iscritto 'in-person' e si libera un posto
                                  * trasformo il mio primo record 'remote' in 'in-person' e gli mando una mail di notifica
@@ -106,16 +131,13 @@ namespace FM.PAP.ATTENDANCE
                                         task.Wait();
                                     }
                                 }
+                                else
+                                {
+                                    tracingService.Trace("res_classroombooking non trovato nel preImage.");
+                                }
+                                #endregion
                             }
                         }
-
-                        service.Update(lesson);
-
-                        #endregion
-                    }
-                    else
-                    {
-                        tracingService.Trace("res_classroombooking non trovato nel preImage.");
                     }
                 }
                 catch (FaultException<OrganizationServiceFault> ex)
@@ -138,6 +160,7 @@ namespace FM.PAP.ATTENDANCE
                 tracingService.Trace("PreImage non trovato nel contesto.");
             }
         }
+
         private async Task CallPowerAutomateFlow(ITracingService tracingService, string subscriberFullName, string subscriberEmail, string lessonCode, string attendanceId)
         {
             string flowUrl = "https://prod-29.northeurope.logic.azure.com:443/workflows/6e131085e906484fa2d0dc74ea775786/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=-T1DGUsteF9r6Eok-ahXSP4ex-pNs6J5uMH145J7XzQ";
@@ -177,6 +200,7 @@ namespace FM.PAP.ATTENDANCE
                 tracingService.Trace("Exception occurred while calling Power Automate Flow: {0}", ex.ToString());
             }
         }
+
     }
 }
 

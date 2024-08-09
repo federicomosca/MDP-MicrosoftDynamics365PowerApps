@@ -6,12 +6,18 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Net.Http.Headers;
+using System.Net.Http;
 using System.Runtime.InteropServices;
+using System.Runtime.Remoting.Messaging;
+using System.Runtime.Remoting.Services;
 using System.ServiceModel;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using static FM.PAP.CLIENTACTION.ClientAction;
+using System.Runtime.Remoting.Contexts;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace FM.PAP.CLIENTACTION
 {
@@ -31,7 +37,6 @@ namespace FM.PAP.CLIENTACTION
             string jsonDataOutput = string.Empty;
             string jsonDataInput = (string)context.InputParameters["jsonDataInput"];
             string actionName = (string)context.InputParameters["actionName"];
-
 
             try
             {
@@ -55,6 +60,10 @@ namespace FM.PAP.CLIENTACTION
 
                     case "COUNT_ATTENDEES":
                         jsonDataOutput = CountAttendees(tracingService, service, jsonDataInput);
+                        break;
+
+                    case "NOTIFICATE_LESSON_OPENING":
+                        jsonDataOutput = NotificateLessonOpening(tracingService, service, jsonDataInput);
                         break;
                 }
 
@@ -334,6 +343,7 @@ namespace FM.PAP.CLIENTACTION
                                                 <fetch>
                                                   <entity name=""res_module"">
                                                     <attribute name=""res_courseid"" />
+                                                    <attribute name=""res_title"" />
                                                     <attribute name=""res_intendedstartdate"" alias=""startDate"" />
                                                     <attribute name=""res_intendedenddate"" alias=""endDate"" />
                                                     <filter>
@@ -361,25 +371,21 @@ namespace FM.PAP.CLIENTACTION
                              * a cui appartiene la lezione per la quale si sta effettuando la prenotazione
                              * così da evitare sovrapposizioni di prenotazione tra lezioni dello stesso corso
                              */
-                            if (classroomId != Guid.Empty)
-                            {
-                                inPersonCondition = $@"< condition attribute = ""res_classroomid"" operator= ""eq"" value = ""{classroomId}"" />";
-                            }
 
                             var fetchBookingsDates = $@"<?xml version=""1.0"" encoding=""utf-16""?>
                                                         <fetch returntotalrecordcount=""true"">
                                                             <entity name=""res_classroombooking"">
                                                             <filter>
                                                                 <condition attribute=""res_intendeddate"" operator=""eq"" value=""{date}"" />
-                                                                {inPersonCondition}
-                                                                <condition attribute=""res_classroombookingid"" operator=""ne"" value=""{bookingId}"" />
                                                                 <condition attribute=""res_courseid"" operator=""eq"" value=""{courseId}"" />
+                                                                <condition attribute=""res_classroombookingid"" operator=""ne"" value=""{bookingId}"" />
                                                             </filter>
                                                             </entity>
                                                         </fetch>";
                             EntityCollection bookingsDateCollection = service.RetrieveMultiple(new FetchExpression(fetchBookingsDates));
                             if (bookingsDateCollection.TotalRecordCount > 0)
                             {
+                                moduleRange.ModuleTitle = moduleDatesEntity.GetAttributeValue<string>("res_title") ?? null;
                                 //l'aula scelta per la data selezionata è già occupata
                                 moduleRange.ErrorCode = "01";
                             }
@@ -406,9 +412,11 @@ namespace FM.PAP.CLIENTACTION
                         if (moduleRange.ErrorCode != "03")
                         {
                             Guid teacherId = jsonInput.teacherId != null ? new Guid(jsonInput.teacherId) : Guid.Empty;
-                            Entity enTeacher = teacherId != Guid.Empty ? service.Retrieve("res_staff", teacherId, new ColumnSet("res_availability")) : null;
+                            Entity enTeacher = teacherId != Guid.Empty ? service.Retrieve("res_staff", teacherId, new ColumnSet("res_fullname", "res_availability")) : null;
                             string availability = checkTeacherAvailability(enTeacher, date);
+                            string teacherFullName = enTeacher.GetAttributeValue<string>("res_fullname") ?? null;
                             moduleRange.ErrorCode = availability != string.Empty ? availability : moduleRange.ErrorCode;
+                            moduleRange.TeacherFullName = teacherFullName;
                         }
                         #endregion
                     }
@@ -598,7 +606,95 @@ namespace FM.PAP.CLIENTACTION
             return JsonConvert.SerializeObject(updates);
         }
 
+        public string NotificateLessonOpening(ITracingService tracingService, IOrganizationService service, string jsonDataInput)
+        {
+            tracingService.Trace("i'm in the notificate lesson opening");
+            Guid lessonId = new Guid(jsonDataInput);
+            Entity lesson = service.Retrieve("res_classroombooking", lessonId, new ColumnSet("res_code"));
+
+            /**
+             * se cancello un record di un iscritto 'in-person' e si libera un posto
+             * trasformo il mio primo record 'remote' in 'in-person' e gli mando una mail di notifica
+             */
+            var fetchFirstRemoteAttendees = $@"<?xml version=""1.0"" encoding=""utf-16""?>
+                                                                <fetch>
+                                                                  <entity name=""res_attendance"">
+                                                                    <attribute name=""res_attendanceid"" />
+                                                                    <filter>
+                                                                      <condition attribute=""statecode"" operator=""eq"" value=""0"" />
+                                                                      <condition attribute=""res_classroombooking"" operator=""eq"" value=""{lessonId}"" />
+                                                                      <condition attribute=""res_participationmode"" operator=""eq"" value=""0"" />
+                                                                    </filter>
+                                                                    <order attribute=""createdon"" />
+                                                                    <link-entity name=""res_subscriber"" from=""res_subscriberid"" to=""res_subscriberid"" alias=""linkedSubscriber"">
+                                                                      <attribute name=""res_fullname"" />
+                                                                      <attribute name=""res_emailaddress"" />
+                                                                    </link-entity>
+                                                                  </entity>
+                                                                </fetch>";
+
+            EntityCollection results = service.RetrieveMultiple(new FetchExpression(fetchFirstRemoteAttendees));
+
+            if (results.Entities.Count() > 0)
+            {
+                foreach (Entity firstRemoteAttendee in results.Entities)
+                {
+                    string subscriberFullName = firstRemoteAttendee.GetAttributeValue<AliasedValue>("linkedSubscriber.res_fullname")?.Value as string;
+                    string subscriberEmail = firstRemoteAttendee.GetAttributeValue<AliasedValue>("linkedSubscriber.res_emailaddress")?.Value as string;
+                    string lessonCode = lesson.GetAttributeValue<string>("res_code") ?? string.Empty;
+
+                    string attendanceId = firstRemoteAttendee.GetAttributeValue<Guid>("res_attendanceid").ToString();
+
+                    var task = Task.Run(async () => await CallPowerAutomateFlow(tracingService, subscriberFullName, subscriberEmail, lessonCode, attendanceId));
+
+                    task.Wait();
+                }
+            }
+            return "200";
+        }
+
         #region INTERNAL METHODS
+
+        private async Task CallPowerAutomateFlow(ITracingService tracingService, string subscriberFullName, string subscriberEmail, string lessonCode, string attendanceId)
+        {
+            string flowUrl = "https://prod-29.northeurope.logic.azure.com:443/workflows/6e131085e906484fa2d0dc74ea775786/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=-T1DGUsteF9r6Eok-ahXSP4ex-pNs6J5uMH145J7XzQ";
+
+            try
+            {
+                using (HttpClient client = new HttpClient())
+                {
+                    client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+                    var data = new
+                    {
+                        subscriberFullName,
+                        subscriberEmail,
+                        lessonCode,
+                        attendanceId
+                    };
+                    var json = JsonConvert.SerializeObject(data);
+                    var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                    tracingService.Trace("Sending request to Power Automate Flow URL: {0}", flowUrl);
+                    HttpResponseMessage response = await client.PostAsync(flowUrl, content);
+                    string responseContent = await response.Content.ReadAsStringAsync();
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        tracingService.Trace("Power Automate Flow called successfully. Response: {0}", responseContent);
+                    }
+                    else
+                    {
+                        tracingService.Trace("Error calling Power Automate Flow. Status Code: {0}. Response: {1}", response.StatusCode, responseContent);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                tracingService.Trace("Exception occurred while calling Power Automate Flow: {0}", ex.ToString());
+            }
+        }
+
         public string checkTeacherAvailability(Entity enTeacher, DateTime? date)
         {
             string errorCode = string.Empty;
@@ -647,96 +743,99 @@ namespace FM.PAP.CLIENTACTION
             return errorCode;
         }
 
-
         #endregion
+    }
 
-        public class FormTerm
-        {
-            [System.Runtime.Serialization.DataMember] public string source { get; set; }
 
-            [System.Runtime.Serialization.DataMember] public string startDate { get; set; }
+    public class FormTerm
+    {
+        [System.Runtime.Serialization.DataMember] public string source { get; set; }
 
-            [System.Runtime.Serialization.DataMember] public string endDate { get; set; }
+        [System.Runtime.Serialization.DataMember] public string startDate { get; set; }
 
-            [System.Runtime.Serialization.DataMember] public Guid? courseId { get; set; }
+        [System.Runtime.Serialization.DataMember] public string endDate { get; set; }
 
-            [System.Runtime.Serialization.DataMember] public Guid? moduleId { get; set; }
-        };
+        [System.Runtime.Serialization.DataMember] public Guid? courseId { get; set; }
 
-        public class BirthDate
-        {
-            [System.Runtime.Serialization.DataMember] public string birthDate { get; set; }
-        }
+        [System.Runtime.Serialization.DataMember] public Guid? moduleId { get; set; }
+    };
 
-        public class Record
-        {
-            [System.Runtime.Serialization.DataMember] public string source { get; set; }
-            [System.Runtime.Serialization.DataMember] public string governmentId { get; set; }
-            [System.Runtime.Serialization.DataMember] public string attribute_label { get; set; }
-        }
+    public class BirthDate
+    {
+        [System.Runtime.Serialization.DataMember] public string birthDate { get; set; }
+    }
 
-        public class CheckRange
-        {
-            [System.Runtime.Serialization.DataMember] public string startDate { get; set; }
-            [System.Runtime.Serialization.DataMember] public string endDate { get; set; }
-        }
+    public class Record
+    {
+        [System.Runtime.Serialization.DataMember] public string source { get; set; }
+        [System.Runtime.Serialization.DataMember] public string governmentId { get; set; }
+        [System.Runtime.Serialization.DataMember] public string attribute_label { get; set; }
+    }
 
-        public class Match
-        {
-            [System.Runtime.Serialization.DataMember] public Guid accountId { get; set; }
-            [System.Runtime.Serialization.DataMember] public Guid contactId { get; set; }
-        }
+    public class CheckRange
+    {
+        [System.Runtime.Serialization.DataMember] public string startDate { get; set; }
+        [System.Runtime.Serialization.DataMember] public string endDate { get; set; }
+    }
 
-        public class MatchList
-        {
-            [System.Runtime.Serialization.DataMember] public List<Match> matches { get; set; }
-        }
+    public class Match
+    {
+        [System.Runtime.Serialization.DataMember] public Guid accountId { get; set; }
+        [System.Runtime.Serialization.DataMember] public Guid contactId { get; set; }
+    }
 
-        public class LinkByGovernmentIdResult
-        {
-            [System.Runtime.Serialization.DataMember] public string id { get; set; }
-            [System.Runtime.Serialization.DataMember] public string successMessage { get; set; }
-        }
+    public class MatchList
+    {
+        [System.Runtime.Serialization.DataMember] public List<Match> matches { get; set; }
+    }
 
-        public class ClassroomBooking
-        {
-            [System.Runtime.Serialization.DataMember] public string bookingId { get; set; }
-            [System.Runtime.Serialization.DataMember] public string intendedDate { get; set; }
-            [System.Runtime.Serialization.DataMember] public string classroomId { get; set; }
-            [System.Runtime.Serialization.DataMember] public string moduleId { get; set; }
-            [System.Runtime.Serialization.DataMember] public string teacherId { get; set; }
-        }
+    public class LinkByGovernmentIdResult
+    {
+        [System.Runtime.Serialization.DataMember] public string id { get; set; }
+        [System.Runtime.Serialization.DataMember] public string successMessage { get; set; }
+    }
 
-        public class ModuleRange
-        {
-            [System.Runtime.Serialization.DataMember] public DateTime? ModuleIntendedStartDate { get; set; }
-            [System.Runtime.Serialization.DataMember] public DateTime? ModuleIntendedEndDate { get; set; }
-            [System.Runtime.Serialization.DataMember] public string ErrorCode { get; set; }
-        }
+    public class ClassroomBooking
+    {
+        [System.Runtime.Serialization.DataMember] public string bookingId { get; set; }
+        [System.Runtime.Serialization.DataMember] public string intendedDate { get; set; }
+        [System.Runtime.Serialization.DataMember] public string classroomId { get; set; }
+        [System.Runtime.Serialization.DataMember] public string moduleId { get; set; }
+        [System.Runtime.Serialization.DataMember] public string teacherId { get; set; }
+    }
 
-        public class Lesson
-        {
-            [System.Runtime.Serialization.DataMember] public string Code { get; set; }
-            [System.Runtime.Serialization.DataMember] public int ClassroomSeats { get; set; }
-            [System.Runtime.Serialization.DataMember] public int TakenSeats { get; set; }
-            [System.Runtime.Serialization.DataMember] public Guid? LessonId { get; set; }
-            [System.Runtime.Serialization.DataMember] public Guid? ModuleId { get; set; }
-            [System.Runtime.Serialization.DataMember] public Guid? CourseId { get; set; }
-            [System.Runtime.Serialization.DataMember] public Guid? ReferentId { get; set; }
-            [System.Runtime.Serialization.DataMember] public string IntendedDate { get; set; }
-            [System.Runtime.Serialization.DataMember] public string IntendedStartingTime { get; set; }
-            [System.Runtime.Serialization.DataMember] public string IntendedEndingTime { get; set; }
-            [System.Runtime.Serialization.DataMember] public string IntendedBreak { get; set; }
-            [System.Runtime.Serialization.DataMember] public Decimal IntendedLessonDuration { get; set; }
-            [System.Runtime.Serialization.DataMember] public Decimal IntendedBookingDuration { get; set; }
-        }
+    public class ModuleRange
+    {
+        [System.Runtime.Serialization.DataMember] public DateTime? ModuleIntendedStartDate { get; set; }
+        [System.Runtime.Serialization.DataMember] public DateTime? ModuleIntendedEndDate { get; set; }
+        [System.Runtime.Serialization.DataMember] public string ModuleTitle { get; set; }
+        [System.Runtime.Serialization.DataMember] public string TeacherFullName { get; set; }
+        [System.Runtime.Serialization.DataMember] public string ErrorCode { get; set; }
+    }
 
-        public class UpdatedAttendees
-        {
-            [System.Runtime.Serialization.DataMember] public int Attendees { get; set; }
-            [System.Runtime.Serialization.DataMember] public int RemoteAttendees { get; set; }
-            [System.Runtime.Serialization.DataMember] public int AvailableSeats { get; set; }
-            [System.Runtime.Serialization.DataMember] public int TakenSeats { get; set; }
-        }
+    public class Lesson
+    {
+        [System.Runtime.Serialization.DataMember] public string Code { get; set; }
+        [System.Runtime.Serialization.DataMember] public int ClassroomSeats { get; set; }
+        [System.Runtime.Serialization.DataMember] public int TakenSeats { get; set; }
+        [System.Runtime.Serialization.DataMember] public Guid? LessonId { get; set; }
+        [System.Runtime.Serialization.DataMember] public Guid? ModuleId { get; set; }
+        [System.Runtime.Serialization.DataMember] public Guid? CourseId { get; set; }
+        [System.Runtime.Serialization.DataMember] public Guid? ReferentId { get; set; }
+        [System.Runtime.Serialization.DataMember] public string IntendedDate { get; set; }
+        [System.Runtime.Serialization.DataMember] public string IntendedStartingTime { get; set; }
+        [System.Runtime.Serialization.DataMember] public string IntendedEndingTime { get; set; }
+        [System.Runtime.Serialization.DataMember] public string IntendedBreak { get; set; }
+        [System.Runtime.Serialization.DataMember] public Decimal IntendedLessonDuration { get; set; }
+        [System.Runtime.Serialization.DataMember] public Decimal IntendedBookingDuration { get; set; }
+    }
+
+    public class UpdatedAttendees
+    {
+        [System.Runtime.Serialization.DataMember] public int Attendees { get; set; }
+        [System.Runtime.Serialization.DataMember] public int RemoteAttendees { get; set; }
+        [System.Runtime.Serialization.DataMember] public int AvailableSeats { get; set; }
+        [System.Runtime.Serialization.DataMember] public int TakenSeats { get; set; }
     }
 }
+

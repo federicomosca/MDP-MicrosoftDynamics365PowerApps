@@ -120,7 +120,8 @@ if (typeof (FM.PAP.LESSON) == "undefined") {
             fields.intendedStartingTime,
             fields.intendedEndingTime,
             fields.intendedBreak,
-            fields.intendedBookingDuration
+            fields.intendedBookingDuration,
+            fields.intendedLessonDuration
         ]);
 
         const moduleField = formContext.getAttribute(fields.module);
@@ -258,13 +259,15 @@ if (typeof (FM.PAP.LESSON) == "undefined") {
                         var jsondataoutput = result["jsonDataOutput"]; // Edm.String
                         const moduleRange = JSON.parse(jsondataoutput);
 
-                        var moduleIntendedStartDate = moduleRange["ModuleIntendedStartDate"];
-                        var moduleIntendedEndDate = moduleRange["ModuleIntendedEndDate"];
-                        var errorCode = moduleRange["ErrorCode"];
+                        const moduleTitle = moduleRange["ModuleTitle"];
+                        const teacherFullName = moduleRange["TeacherFullName"];
+                        const moduleIntendedStartDate = moduleRange["ModuleIntendedStartDate"];
+                        const moduleIntendedEndDate = moduleRange["ModuleIntendedEndDate"];
+                        const errorCode = moduleRange["ErrorCode"];
 
                         switch (errorCode) {
                             case "01":
-                                errorMessage = `L\'aula selezionata \u00E8 gi\u00E0 stata prenotata per la data scelta.`;
+                                errorMessage = `Esiste gi\u00E0 una lezione del modulo '${moduleTitle}' per la data scelta.`;
                                 break;
 
                             case "02":
@@ -276,7 +279,7 @@ if (typeof (FM.PAP.LESSON) == "undefined") {
                                 break;
 
                             case "04":
-                                errorMessage = 'Il docente del modulo non \u00E8 disponibile per la data scelta.';
+                                errorMessage = `Il docente ${teacherFullName} non \u00E8 disponibile per la data scelta.`;
                                 break;
 
                             case "05":
@@ -309,57 +312,56 @@ if (typeof (FM.PAP.LESSON) == "undefined") {
         const formContext = executionContext.getFormContext();
         const eventSourceAttribute = executionContext.getEventSource();
         const eventSourceControl = formContext.getControl(eventSourceAttribute.getName());
-        formContext.getControl(fields.intendedStartingTime).clearNotification();
-        formContext.getControl(fields.intendedEndingTime).clearNotification();
-        formContext.getControl(fields.intendedBreak).clearNotification();
 
         try {
-            let intendedStartingTime;
-            let intendedEndingTime;
-            let intendedBreak;
-            let intendedBookingDuration;
 
-            const changingFields = {
+            const fieldsToCheck = {
                 startTime: fields.intendedStartingTime,
                 endTime: fields.intendedEndingTime,
-                break: fields.intendedBreak
+                break: fields.intendedBreak,
             };
 
-            const fieldValues = {};
+            let intendedBookingDuration;
 
-            Object.keys(changingFields).forEach(fieldKey => {
-                fieldValues[fieldKey] = formContext.getAttribute(changingFields[fieldKey]).getValue();
+            const fieldsValuesMinutes = {};
+
+            const fieldsValues = {};
+
+            //cancello le notifiche di errore
+            Object.keys(fieldsToCheck).forEach(fieldKey => {
+                formContext.getControl(fieldsToCheck[fieldKey]).clearNotification();
+            });
+
+            //salvo i valori inseriti nei campi
+            Object.keys(fieldsToCheck).forEach(fieldKey => {
+                fieldsValues[fieldKey] = formContext.getAttribute(fieldsToCheck[fieldKey]).getValue();
             })
 
-            if (fieldValues.startTime) intendedStartingTime = timeStringToMinutes(fieldValues.startTime);
-            if (fieldValues.endTime) intendedEndingTime = timeStringToMinutes(fieldValues.endTime);
-            if (fieldValues.break) intendedBreak = timeStringToMinutes(fieldValues.break);
+            //converto i valori inseriti in minuti
+            Object.keys(fieldsValues).forEach(fieldKey => {
+                if (fieldsValues[fieldKey]) fieldsValuesMinutes[fieldKey] = timeStringToMinutes(fieldsValues[fieldKey]);
+            })
 
-            const formattedFields = {
-                startTime: formatTime(fieldValues.startTime),
-                endTime: formatTime(fieldValues.endTime),
-                break: formatTime(fieldValues.break)
-            };
-
-            Object.keys(changingFields).forEach(fieldKey => {
-                if (formattedFields[fieldKey]) formContext.getAttribute(changingFields[fieldKey]).setValue(formattedFields[fieldKey]);
+            //formatto i valori inseriti nei campi
+            Object.keys(fieldsToCheck).forEach(fieldKey => {
+                if (fieldsValues[fieldKey]) formContext.getAttribute(fieldsToCheck[fieldKey]).setValue(formatTime(fieldsValues[fieldKey]));
             })
 
             /**
              * determino durata prenotazione e durata lezione
              */
-            if (intendedStartingTime && intendedEndingTime) {
-                if (intendedStartingTime < intendedEndingTime) {
-                    intendedBookingDuration = intendedEndingTime - intendedStartingTime;
+            if (fieldsValuesMinutes.startTime && fieldsValuesMinutes.endTime) {
+                if (fieldsValuesMinutes.startTime < fieldsValuesMinutes.endTime) {
+                    intendedBookingDuration = fieldsValuesMinutes.endTime - fieldsValuesMinutes.startTime;
                     const intendedBookingDurationString = minutesToTimeString(intendedBookingDuration);
                     formContext.getAttribute(fields.intendedBookingDuration).setValue(intendedBookingDurationString);
                 }
                 else throw new Error('Ora Inizio Prevista non può essere antecedente a Ora Fine Prevista');
             }
 
-            if (intendedBreak && intendedBookingDuration) {
-                if (intendedBreak <= intendedBookingDuration) {
-                    const intendedLessonDuration = intendedBookingDuration - intendedBreak;
+            if (fieldsValuesMinutes.break && intendedBookingDuration) {
+                if (fieldsValuesMinutes.break <= intendedBookingDuration) {
+                    const intendedLessonDuration = intendedBookingDuration - fieldsValuesMinutes.break;
                     const intendedLessonDurationString = minutesToTimeString(intendedLessonDuration);
                     formContext.getAttribute(fields.intendedLessonDuration).setValue(intendedLessonDurationString);
                 }
