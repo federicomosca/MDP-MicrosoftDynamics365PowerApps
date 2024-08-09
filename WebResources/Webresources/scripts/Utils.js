@@ -29,21 +29,49 @@ function validateTime(time) {
     return regex.test(time);
 }
 
-const timeStringToMinutes = timeString => {
-    if (timeString) {
-        if (validateTime(timeString)) {
-            const formattedTimeString = timeString.replace(/[.]/g, ':');
-            const hhmm = formattedTimeString.split(":");
-            const hours = parseInt(hhmm[0], 10);
-            const minutes = hhmm[1] ? parseInt(hhmm[1], 10) : 0;
+function formatTime(unformattedTime) {
+    if (unformattedTime) {
+        if (validateTime(unformattedTime)) {
 
-            return (hours * 60) + minutes;
-        }
-        else throw new Error("Il formato non è valido. Inserisci l'orario in uno dei seguenti formati: [hh:mm], [hh.mm], [h:mm], [h.mm], [hh], [h]");
-    }
-    else throw new Error("Time string not found.");
+            let time = unformattedTime.replace(/\./g, ":");
+
+            const hh_mm = /^\d{2}:\d{2}$/; // Formato HH:mm
+            const h_mm = /^\d{1}:\d{2}$/;  // Formato H:mm
+            const hh = /^\d{2}$/;          // Formato HH
+            const h = /^\d{1}$/;           // Formato H
+
+            if (hh_mm.test(time)) {
+                return time;
+            }
+
+            else if (h_mm.test(time)) {
+                return "0" + time;
+            }
+
+            else if (hh.test(time)) {
+                return time + ":00";
+            }
+
+            else if (h.test(time)) {
+                return "0" + time + ":00";
+
+            } else throw new Error("Il formato non è valido. Inserisci l'orario in uno dei seguenti formati: [hh:mm], [hh.mm], [h:mm], [h.mm], [hh], [h]");
+
+        } else throw new Error("Il formato non è valido. Inserisci l'orario in uno dei seguenti formati: [hh:mm], [hh.mm], [h:mm], [h.mm], [hh], [h]");
+
+    } else throw new Error("Time string not found.");
 }
 
+const timeStringToMinutes = timeString => {
+    if (timeString) {
+        const formattedTimeString = formatTime(timeString);
+        const hhmm = formattedTimeString.split(":");
+        const hours = parseInt(hhmm[0], 10);
+        const minutes = hhmm[1] ? parseInt(hhmm[1], 10) : 0;
+
+        return (hours * 60) + minutes;
+    } else throw new Error("Time string not found.");
+}
 
 const minutesToTimeString = totalMinutes => {
     if (totalMinutes) {

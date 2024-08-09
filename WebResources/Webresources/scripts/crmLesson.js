@@ -319,14 +319,35 @@ if (typeof (FM.PAP.LESSON) == "undefined") {
             let intendedBreak;
             let intendedBookingDuration;
 
-            const intendedStartingTimeString = formContext.getAttribute(fields.intendedStartingTime).getValue();
-            const intendedEndingTimeString = formContext.getAttribute(fields.intendedEndingTime).getValue();
-            const intendedBreakString = formContext.getAttribute(fields.intendedBreak).getValue();
+            const changingFields = {
+                startTime: fields.intendedStartingTime,
+                endTime: fields.intendedEndingTime,
+                break: fields.intendedBreak
+            };
 
-            if (intendedStartingTimeString) intendedStartingTime = timeStringToMinutes(intendedStartingTimeString);
-            if (intendedEndingTimeString) intendedEndingTime = timeStringToMinutes(intendedEndingTimeString);
-            if (intendedBreakString) intendedBreak = timeStringToMinutes(intendedBreakString);
+            const fieldValues = {};
 
+            Object.keys(changingFields).forEach(fieldKey => {
+                fieldValues[fieldKey] = formContext.getAttribute(changingFields[fieldKey]).getValue();
+            })
+
+            if (fieldValues.startTime) intendedStartingTime = timeStringToMinutes(fieldValues.startTime);
+            if (fieldValues.endTime) intendedEndingTime = timeStringToMinutes(fieldValues.endTime);
+            if (fieldValues.break) intendedBreak = timeStringToMinutes(fieldValues.break);
+
+            const formattedFields = {
+                startTime: formatTime(fieldValues.startTime),
+                endTime: formatTime(fieldValues.endTime),
+                break: formatTime(fieldValues.break)
+            };
+
+            Object.keys(changingFields).forEach(fieldKey => {
+                if (formattedFields[fieldKey]) formContext.getAttribute(changingFields[fieldKey]).setValue(formattedFields[fieldKey]);
+            })
+
+            /**
+             * determino durata prenotazione e durata lezione
+             */
             if (intendedStartingTime && intendedEndingTime) {
                 if (intendedStartingTime < intendedEndingTime) {
                     intendedBookingDuration = intendedEndingTime - intendedStartingTime;
