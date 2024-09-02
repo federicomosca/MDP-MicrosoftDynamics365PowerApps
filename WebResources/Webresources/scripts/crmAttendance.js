@@ -215,8 +215,9 @@ if (typeof (FM.PAP.ATTENDANCE) == "undefined") {
 
                                     Xrm.WebApi.retrieveMultipleRecords("res_attendance", fetchXml).then(
                                         results => {
-                                            if (results.entities.length === classroomSeats) {
+                                            if (results.entities.length === classroomSeats && participationMode) {
                                                 errorMessage = "Non ci sono pi\u00F9 posti disponibili";
+                                                formContext.getControl(fields.participationMode).setNotification(errorMessage);
                                             }
                                         },
                                         error => { console.log(error.message); }
