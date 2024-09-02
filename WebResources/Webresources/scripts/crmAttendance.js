@@ -134,14 +134,22 @@ if (typeof (FM.PAP.ATTENDANCE) == "undefined") {
                                          * altrimenti controllo la sessionMode dell'aula e se è in presenza controllo la partecipazione in presenza se`è obbligatoria
                                          * in quest'ultimo caso i nuovi iscritti vedranno solo "da remoto"
                                          */
-                                        if (results.entities.length === classroomSeats) {
-                                            participationModeControl.setVisible(false);
+
+                                        if (results.entities.length !== classroomSeats) {
+                                            if (isInPersonMandatory) {
+                                                participationModeControl.setVisible(false);
+                                                formContext.getAttribute(fields.participationMode).setValue(true);
+                                            }
+                                            else {
+                                                participationModeControl.setVisible(true);
+                                                formContext.getAttribute(fields.participationMode).setValue(true);
+                                            }
                                         } else {
                                             if (isInPersonMandatory) {
                                                 participationModeControl.setVisible(false);
+                                                formContext.getAttribute(fields.participationMode).setValue(false);
                                             } else {
                                                 participationModeControl.setVisible(true);
-                                                formContext.getAttribute(fields.participationMode).setValue(true);
                                             }
                                         }
                                     },
@@ -173,10 +181,11 @@ if (typeof (FM.PAP.ATTENDANCE) == "undefined") {
         if (lesson) {
             const lessonId = formContext.getAttribute(fields.lesson).getValue()[0].id;
 
-            Xrm.WebApi.retrieveRecord("res_classroombooking", lessonId, "?$select=res_sessionmode, res_inpersonparticipation").then(
+            Xrm.WebApi.retrieveRecord("res_classroombooking", lessonId, "?$select=_res_classroomid_value, res_sessionmode, res_inpersonparticipation").then(
                 lesson => {
                     const sessionMode = lesson.res_sessionmode;
                     const isInPersonMandatory = lesson.res_inpersonparticipation;
+                    const classroomId = lesson._res_classroomid_value;
 
                     if (!sessionMode) {
                         if (participationMode)
@@ -184,13 +193,43 @@ if (typeof (FM.PAP.ATTENDANCE) == "undefined") {
                     } else {
                         if (isInPersonMandatory && !participationMode) {
                             errorMessage = "È obbligatoria la presenza in aula.";
+                        } else {
+                            Xrm.WebApi.retrieveRecord("res_classroom", classroomId, "?$select=res_seats").then(
+                                classroom => {
+                                    const classroomSeats = classroom.res_seats;
+
+                                    /**
+                                    * recupero il numero di iscritti alla lezione attivi e in presenza
+                                    */
+                                    var fetchXml = [
+                                        "?fetchXml=<fetch returntotalrecordcount='true'>",
+                                        "  <entity name='res_attendance'>",
+                                        "    <filter>",
+                                        "      <condition attribute='res_classroombooking' operator='eq' value='", lessonId, "'/>",
+                                        "      <condition attribute='res_participationmode' operator='eq' value='1'/>",
+                                        "      <condition attribute='statecode' operator='eq' value='0'/>",
+                                        "    </filter>",
+                                        "  </entity>",
+                                        "</fetch>"
+                                    ].join("");
+
+                                    Xrm.WebApi.retrieveMultipleRecords("res_attendance", fetchXml).then(
+                                        results => {
+                                            if (results.entities.length === classroomSeats) {
+                                                errorMessage = "Non ci sono pi\u00F9 posti disponibili";
+                                            }
+                                        },
+                                        error => { console.log(error.message); }
+                                    );
+                                },
+                                error => { console.log(error.message); }
+                            );
                         }
                     }
                     if (errorMessage) formContext.getControl(fields.participationMode).setNotification(errorMessage);
                 },
                 error => { console.log(error.message); });
         }
-
     }
 
     _self.onLoadForm = async function (executionContext) {
@@ -204,7 +243,7 @@ if (typeof (FM.PAP.ATTENDANCE) == "undefined") {
         formContext.getAttribute(fields.participationMode).addOnChange(_self.onChangeParticipationMode);
         formContext.getAttribute(fields.lesson).addOnChange(_self.fillLessonRelatedFields);
 
-        // Init functions
+        // Init functions   
         _self.fillLessonRelatedFields(executionContext);
         _self.checkAvailableParticipationMode(executionContext);
 

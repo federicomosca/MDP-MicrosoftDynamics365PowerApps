@@ -287,7 +287,7 @@ if (typeof (FM.PAP.LESSON) == "undefined") {
                                 break;
 
                             case "06":
-                                errorMessage = 'Il modulo per il quale si sta prenotando la lezione non \U00E8 stato trovato.';
+                                errorMessage = 'Il modulo per il quale si sta prenotando la lezione non \u00E8 stato trovato.';
                                 break;
 
                             case "07":
