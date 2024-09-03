@@ -188,7 +188,7 @@ namespace
             int? endTime = null;
             int? timeToCheck = null;
 
-            if (startTimeString != null && endTimeString != null)
+            if (startTimeString != null && endTimeString != null && timeStringToCheck != null)
             {
                 startTime = StringTimeToInt(startTimeString);
                 endTime = StringTimeToInt(endTimeString);

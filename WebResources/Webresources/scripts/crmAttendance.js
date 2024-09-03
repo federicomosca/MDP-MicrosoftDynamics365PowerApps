@@ -65,9 +65,11 @@ if (typeof (FM.PAP.ATTENDANCE) == "undefined") {
         var formContext = executionContext.getFormContext();
     };
 
-    _self.fillLessonRelatedFields = executionContext => {
+    _self.fillLessonRelatedFields = function(executionContext, switchh) {
         const formContext = executionContext.getFormContext();
         let date, startingTime, endingTime;
+
+        if (!switchh) return;
 
         const lessonField = formContext.getAttribute(fields.lesson);
         const lessonId = lessonField.getValue() ? lessonField.getValue()[0].id : null;
@@ -233,6 +235,81 @@ if (typeof (FM.PAP.ATTENDANCE) == "undefined") {
         }
     }
 
+    _self.onChangeTime = executionContext => {
+        const formContext = executionContext.getFormContext();
+        const eventSourceAttribute = executionContext.getEventSource();
+        const eventSourceControl = formContext.getControl(eventSourceAttribute.getName());
+
+        try {
+
+            const fieldsToCheck = {
+                startTime: fields.startingTime,
+                endTime: fields.endingTime,
+            };
+
+            const fieldsValuesMinutes = {};
+
+            const fieldsValues = {};
+
+            //cancello le notifiche di errore
+            Object.keys(fieldsToCheck).forEach(fieldKey => {
+                formContext.getControl(fieldsToCheck[fieldKey]).clearNotification();
+            });
+
+            //salvo i valori inseriti nei campi
+            Object.keys(fieldsToCheck).forEach(fieldKey => {
+                fieldsValues[fieldKey] = formContext.getAttribute(fieldsToCheck[fieldKey]).getValue();
+            })
+
+            //converto i valori inseriti in minuti
+            Object.keys(fieldsValues).forEach(fieldKey => {
+                if (fieldsValues[fieldKey]) fieldsValuesMinutes[fieldKey] = timeStringToMinutes(fieldsValues[fieldKey]);
+            })
+
+            //formatto i valori inseriti nei campi
+            Object.keys(fieldsToCheck).forEach(fieldKey => {
+                if (fieldsValues[fieldKey]) formContext.getAttribute(fieldsToCheck[fieldKey]).setValue(formatTime(fieldsValues[fieldKey]));
+            })
+
+            const lesson = formContext.getAttribute(fields.lesson).getValue();
+
+            if (lesson) {
+                const lessonId = formContext.getAttribute(fields.lesson).getValue()[0].id;
+
+                Xrm.WebApi.retrieveRecord("res_classroombooking", lessonId, "?$select=res_intendedstartingtime, res_intendedendingtime").then(
+                    lesson => {
+                        const intendedStartingTime = timeStringToMinutes(lesson.res_intendedstartingtime);
+                        const intendedEndingTime = timeStringToMinutes(lesson.res_intendedendingtime);
+
+                        console.log('intendedStartingTime' + intendedStartingTime);
+                        console.log('intendedStartingTime' + intendedStartingTime);
+                        try {
+                            if (!isInRange(intendedStartingTime, intendedEndingTime, fieldsValuesMinutes.startTime))
+                                throw new Error("L'ora di inizio della presenza non pu\u00F2 cadere fuori dall'orario della lezione.");
+
+                            if (!isInRange(intendedStartingTime, intendedEndingTime, fieldsValuesMinutes.endTime))
+                                throw new Error("L'ora di fine della presenza non pu\u00F2 cadere fuori dall'orario della lezione.");
+
+                        } catch (error) {
+                            eventSourceControl.setNotification(error.message);
+                        }
+                    },
+                    error => {
+                        console.log(error.message);
+                    }
+                );
+            } else {
+                console.log("lesson not found");
+            }
+
+            if (fieldsValuesMinutes.startTime && fieldsValuesMinutes.endTime) {
+                if (fieldsValuesMinutes.startTime > fieldsValuesMinutes.endTime)
+                    throw new Error('Ora Inizio non può essere antecedente a Ora Fine');
+            }
+        } catch (error) {
+            eventSourceControl.setNotification(error.message);
+        }
+    };
     _self.onLoadForm = async function (executionContext) {
         await import('../res_scripts/Utils.js');
 
@@ -242,10 +319,12 @@ if (typeof (FM.PAP.ATTENDANCE) == "undefined") {
         formContext.data.entity.addOnSave(_self.onSaveForm);
 
         formContext.getAttribute(fields.participationMode).addOnChange(_self.onChangeParticipationMode);
-        formContext.getAttribute(fields.lesson).addOnChange(_self.fillLessonRelatedFields);
+        formContext.getAttribute(fields.lesson).addOnChange(() => { _self.fillLessonRelatedFields(executionContext, true); });
+        formContext.getAttribute(fields.startingTime).addOnChange(_self.onChangeTime);
+        formContext.getAttribute(fields.endingTime).addOnChange(_self.onChangeTime);
 
         // Init functions   
-        _self.fillLessonRelatedFields(executionContext);
+        _self.fillLessonRelatedFields(executionContext, false);
         _self.checkAvailableParticipationMode(executionContext);
 
         switch (formContext.ui.getFormType()) {

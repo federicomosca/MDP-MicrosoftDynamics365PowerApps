@@ -88,6 +88,13 @@ const minutesToTimeString = totalMinutes => {
     else throw new Error("Time not found.")
 }
 
+function isInRange(startTime, endTime, timeToCheck) {
+    if (startTime && endTime && timeToCheck) {
+        return startTime <= timeToCheck && endTime >= timeToCheck;
+    }
+    return null;
+}
+
 function getTimeValue(context, field) {
     const timeString = context.getAttribute(field).getValue();
     if (timeString != null) {

@@ -140,6 +140,9 @@ namespace FM.PAP.ATTENDANCE
                         throw new ApplicationException("L'ora di inizio della presenza non pu\u00F2 essere antecedente all'ora di fine.");
 
                     #endregion
+
+                    #region CONTROLLO CHE NON CI SIANO DUE PRESENZE CON LO STESSO CODICE
+                    #endregion
                 }
                 catch (FaultException<OrganizationServiceFault> ex)
                 {
