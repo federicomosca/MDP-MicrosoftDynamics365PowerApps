@@ -24,7 +24,7 @@ namespace Dynamics365.attendance
                 context.InputParameters["Target"] is Entity)
             {
                 Entity target = (Entity)context.InputParameters["Target"];
-                Entity preImage = (Entity)context.PreEntityImages["PreImage"];
+                Entity preImage = context.PreEntityImages["PreImage"];
 
                 IOrganizationServiceFactory serviceFactory = (IOrganizationServiceFactory)serviceProvider.GetService(typeof(IOrganizationServiceFactory));
                 IOrganizationService service = serviceFactory.CreateOrganizationService(context.UserId);

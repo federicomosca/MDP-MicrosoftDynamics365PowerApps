@@ -7,7 +7,7 @@ using System.ServiceModel;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace 
+namespace
     FM.PAP.UTILS
 {
     public class Utils
@@ -171,6 +171,30 @@ namespace
         public static T GetAttributeFromTargetOrPreImage<T>(string logicalName, Entity target, Entity preImage)
         {
             return target.Contains(logicalName) ? target.GetAttributeValue<T>(logicalName) : preImage.GetAttributeValue<T>(logicalName);
+        }
+
+        public static int StringTimeToInt(string time)
+        {
+            TimeSpan ts = TimeSpan.Parse(time);
+            int hours = ts.Hours;
+            int minutes = ts.Minutes;
+
+            return minutes + (hours * 60);
+        }
+
+        public static bool IsInRange(string startTimeString, string endTimeString, string timeStringToCheck)
+        {
+            int? startTime = null;
+            int? endTime = null;
+            int? timeToCheck = null;
+
+            if (startTimeString != null && endTimeString != null)
+            {
+                startTime = StringTimeToInt(startTimeString);
+                endTime = StringTimeToInt(endTimeString);
+                timeToCheck = StringTimeToInt(timeStringToCheck);
+            }
+                return startTime <= timeToCheck && endTime >= timeToCheck;
         }
 
         public class RandomUrlGenerator

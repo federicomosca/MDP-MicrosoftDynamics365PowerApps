@@ -37,7 +37,7 @@ namespace FM.PAP.ATTENDANCE
                     Utils.CheckMandatoryFieldsOnCreate(UtilsAttendance.mandatoryFields, target);
 
                     EntityReference erLesson = target.GetAttributeValue<EntityReference>("res_classroombooking");
-                    ColumnSet lessonColumnSet = new ColumnSet("res_code", "res_classroomid", "res_inpersonparticipation", "res_takenseats", "res_availableseats", "res_attendees", "res_inpersonparticipation", "res_remoteparticipationurl");
+                    ColumnSet lessonColumnSet = new ColumnSet("res_code", "res_classroomid", "res_inpersonparticipation", "res_takenseats", "res_availableseats", "res_attendees", "res_inpersonparticipation", "res_remoteparticipationurl", "res_intendedstartingtime", "res_intendedendingtime");
                     Entity lesson = service.Retrieve("res_classroombooking", erLesson.Id, lessonColumnSet);
 
                     EntityReference erAttendee = target.GetAttributeValue<EntityReference>("res_subscriberid");
@@ -122,6 +122,24 @@ namespace FM.PAP.ATTENDANCE
                         }
                     }
                     #endregion
+
+                    #region CONTROLLO CHE ORARIO PRESENZA SIA NEL RANGE DELLA LEZIONE
+                    string intendedStartingTimeString = lesson.GetAttributeValue<string>("res_intendedstartingtime") ?? null;
+                    string intendedEndingTimeString = lesson.GetAttributeValue<string>("res_intendedendingtime") ?? null;
+
+                    string attendanceStartingTimeString = target.GetAttributeValue<string>("res_startingtime") ?? null;
+                    string attendanceEndingTimeString = target.GetAttributeValue<string>("res_endingtime") ?? null;
+
+                    if (!Utils.IsInRange(intendedStartingTimeString, intendedEndingTimeString, attendanceStartingTimeString)) 
+                        throw new ApplicationException("L'ora di inizio della presenza non pu\u00F2 cadere fuori dall'orario della lezione.");                    
+                    
+                    if (!Utils.IsInRange(intendedStartingTimeString, intendedEndingTimeString, attendanceEndingTimeString)) 
+                        throw new ApplicationException("L'ora di fine della presenza non pu\u00F2 cadere fuori dall'orario della lezione.");
+
+                    if (Utils.StringTimeToInt(attendanceStartingTimeString) > Utils.StringTimeToInt(attendanceEndingTimeString))
+                        throw new ApplicationException("L'ora di inizio della presenza non pu\u00F2 essere antecedente all'ora di fine.");
+
+                    #endregion
                 }
                 catch (FaultException<OrganizationServiceFault> ex)
                 {
@@ -137,8 +155,10 @@ namespace FM.PAP.ATTENDANCE
                     tracingService.Trace("FollowUpPlugin: {0}", ex.ToString());
                     throw ex;
                 }
+
             }
         }
+
         private async Task CallPowerAutomateFlow(ITracingService tracingService, string subscriberFullName, string contactEmail, string lessonCode, string url)
         {
             string flowUrl = "https://prod-51.northeurope.logic.azure.com:443/workflows/43054e79d1364589a2cca95b0ae5c1bf/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=VGK8qOuaqcaYcOYWgSIO6DH57J-kKxQmsBdwk3-b8wU";

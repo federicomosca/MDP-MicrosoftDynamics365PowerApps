@@ -69,9 +69,6 @@ namespace FM.PAP.ATTENDANCE
                         {
                             if (inPersonAttendancesCount < classroomSeats)
                             {
-                                /**
-                                 * CHIAMATA ALLA CUSTOM API CHE TORNA ERRORE: 0x80040265
-                                 */
 
                                 var request = new OrganizationRequest("res_ClientAction");
 

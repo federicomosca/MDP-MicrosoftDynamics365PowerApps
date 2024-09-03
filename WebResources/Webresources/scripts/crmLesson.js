@@ -39,6 +39,7 @@ if (typeof (FM.PAP.LESSON) == "undefined") {
             sessionMode: "res_sessionmode",
             takenSeats: "res_takenseats",
             availableSeats: "res_availableseats",
+            classroomSeats: "res_classroomseats",
             attendees: "res_attendees",
             remoteAttendees: "res_remoteattendees",
             inPersonParticipation: "res_inpersonparticipation",
@@ -102,8 +103,8 @@ if (typeof (FM.PAP.LESSON) == "undefined") {
 
             Xrm.WebApi.retrieveRecord("res_classroom", classroomId, "?$select=res_seats").then(
                 function (classroom) {
-                    const availableSeats = classroom.res_seats;
-                    availableSeats ? formContext.getAttribute(fields.availableSeats).setValue(availableSeats) : null;
+                    const classroomSeats = classroom.res_seats;
+                    if(classroomSeats) formContext.getAttribute(fields.classroomSeats).setValue(classroomSeats);
                 },
                 function (error) {
                     console.log(error.message);
@@ -383,6 +384,7 @@ if (typeof (FM.PAP.LESSON) == "undefined") {
         const fieldsToHandle = [
             fields.classroom,
             fields.availableSeats,
+            fields.classroomSeats,
             fields.takenSeats,
             fields.inPersonParticipation,
             fields.remoteAttendees
