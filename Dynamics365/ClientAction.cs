@@ -608,8 +608,9 @@ namespace FM.PAP.CLIENTACTION
 
         public string NotificateLessonOpening(ITracingService tracingService, IOrganizationService service, string jsonDataInput)
         {
-            tracingService.Trace("i'm in the notificate lesson opening");
-            Guid lessonId = new Guid(jsonDataInput);
+            string lessonIdString = JsonConvert.DeserializeObject<string>(jsonDataInput);
+            Guid lessonId = new Guid(lessonIdString);
+
             Entity lesson = service.Retrieve("res_classroombooking", lessonId, new ColumnSet("res_code"));
 
             /**

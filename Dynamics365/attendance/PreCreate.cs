@@ -99,6 +99,7 @@ namespace FM.PAP.ATTENDANCE
                             string subscriberFullName;
                             string subscriberEmail;
                             string lessonCode;
+                            string url;
 
                             EntityReference erSubscriber = target.GetAttributeValue<EntityReference>("res_subscriberid");
                             Entity subscriber = erSubscriber != null ? service.Retrieve("res_subscriber", erSubscriber.Id, new ColumnSet("res_fullname", "res_emailaddress")) : null;
@@ -108,8 +109,9 @@ namespace FM.PAP.ATTENDANCE
                                 subscriberFullName = subscriber.GetAttributeValue<string>("res_fullname") ?? string.Empty;
                                 subscriberEmail = subscriber.GetAttributeValue<string>("res_emailaddress") ?? string.Empty;
                                 lessonCode = lesson.GetAttributeValue<string>("res_code") ?? string.Empty;
+                                url = lesson.GetAttributeValue<string>("res_remoteparticipationurl") ?? string.Empty;
 
-                                var task = Task.Run(async () => await CallPowerAutomateFlow(tracingService, subscriberFullName, subscriberEmail, lessonCode));
+                                var task = Task.Run(async () => await CallPowerAutomateFlow(tracingService, subscriberFullName, subscriberEmail, lessonCode, url));
 
                                 task.Wait();
                             }
@@ -137,7 +139,7 @@ namespace FM.PAP.ATTENDANCE
                 }
             }
         }
-        private async Task CallPowerAutomateFlow(ITracingService tracingService, string subscriberFullName, string contactEmail, string lessonCode)
+        private async Task CallPowerAutomateFlow(ITracingService tracingService, string subscriberFullName, string contactEmail, string lessonCode, string url)
         {
             string flowUrl = "https://prod-51.northeurope.logic.azure.com:443/workflows/43054e79d1364589a2cca95b0ae5c1bf/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=VGK8qOuaqcaYcOYWgSIO6DH57J-kKxQmsBdwk3-b8wU";
 
@@ -151,7 +153,8 @@ namespace FM.PAP.ATTENDANCE
                     {
                         subscriberFullName,
                         contactEmail,
-                        lessonCode
+                        lessonCode,
+                        url
                     };
                     var json = JsonConvert.SerializeObject(data);
                     var content = new StringContent(json, Encoding.UTF8, "application/json");

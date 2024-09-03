@@ -69,71 +69,32 @@ namespace FM.PAP.ATTENDANCE
                         {
                             if (inPersonAttendancesCount < classroomSeats)
                             {
-
                                 /**
                                  * CHIAMATA ALLA CUSTOM API CHE TORNA ERRORE: 0x80040265
                                  */
 
-                                //var request = new OrganizationRequest("NOTIFICATE_LESSON_OPENING");
+                                var request = new OrganizationRequest("res_ClientAction");
 
-                                //request["jsonDataInput"] = JsonConvert.SerializeObject(erLesson.Id);
+                                request["jsonDataInput"] = JsonConvert.SerializeObject(erLesson.Id);
+                                request["actionName"] = "NOTIFICATE_LESSON_OPENING";
 
-                                //try
-                                //{
-                                //    OrganizationResponse response = service.Execute(request);
-                                //    tracingService.Trace("after calling client action");
-                                //    if (response.Results.Contains("jsonDataOutput"))
-                                //    {
-                                //        tracingService.Trace("response from client action");
-                                //        var outputValue = response.Results["jsonDataOutput"];
-                                //    }
-                                //}
-                                //catch (FaultException<OrganizationServiceFault> ex)
-                                //{
-                                //    throw new InvalidPluginExecutionException($"Errore durante l'esecuzione dell'azione: {ex.Message}");
-                                //}
-
-                                /**
-                                 * se cancello un record di un iscritto 'in-person' e si libera un posto
-                                 * trasformo il mio primo record 'remote' in 'in-person' e gli mando una mail di notifica
-                                 */
-                                var fetchFirstRemoteAttendees = $@"<?xml version=""1.0"" encoding=""utf-16""?>
-                                                                <fetch>
-                                                                  <entity name=""res_attendance"">
-                                                                    <attribute name=""res_attendanceid"" />
-                                                                    <filter>
-                                                                      <condition attribute=""statecode"" operator=""eq"" value=""0"" />
-                                                                      <condition attribute=""res_classroombooking"" operator=""eq"" value=""{erLesson.Id}"" />
-                                                                      <condition attribute=""res_participationmode"" operator=""eq"" value=""0"" />
-                                                                    </filter>
-                                                                    <order attribute=""createdon"" />
-                                                                    <link-entity name=""res_subscriber"" from=""res_subscriberid"" to=""res_subscriberid"" alias=""linkedSubscriber"">
-                                                                      <attribute name=""res_fullname"" />
-                                                                      <attribute name=""res_emailaddress"" />
-                                                                    </link-entity>
-                                                                  </entity>
-                                                                </fetch>";
-
-                                EntityCollection results = service.RetrieveMultiple(new FetchExpression(fetchFirstRemoteAttendees));
-
-                                if (results.Entities.Count() > 0)
+                                try
                                 {
-                                    foreach (Entity firstRemoteAttendee in results.Entities)
+                                    tracingService.Trace("Contenuto di jsonDataInput: {0}", request["jsonDataInput"]);
+
+                                    OrganizationResponse response = service.Execute(request);
+                                    tracingService.Trace("after calling client action");
+                                    if (response.Results.Contains("jsonDataOutput"))
                                     {
-                                        string subscriberFullName = firstRemoteAttendee.GetAttributeValue<AliasedValue>("linkedSubscriber.res_fullname")?.Value as string;
-                                        string subscriberEmail = firstRemoteAttendee.GetAttributeValue<AliasedValue>("linkedSubscriber.res_emailaddress")?.Value as string;
-                                        string lessonCode = lesson.GetAttributeValue<string>("res_code") ?? string.Empty;
-
-                                        string attendanceId = firstRemoteAttendee.GetAttributeValue<Guid>("res_attendanceid").ToString();
-
-                                        var task = Task.Run(async () => await CallPowerAutomateFlow(tracingService, subscriberFullName, subscriberEmail, lessonCode, attendanceId));
-
-                                        task.Wait();
+                                        tracingService.Trace("response from client action");
+                                        var outputValue = response.Results["jsonDataOutput"];
                                     }
                                 }
-                                else
+                                catch (FaultException<OrganizationServiceFault> ex)
                                 {
-                                    tracingService.Trace("res_classroombooking non trovato nel preImage.");
+                                    tracingService.Trace("OrganizationServiceFault Exception: {0}", ex.ToString());
+
+                                    throw new InvalidPluginExecutionException($"Errore durante l'esecuzione dell'azione: {ex.Message}");
                                 }
                                 #endregion
                             }
