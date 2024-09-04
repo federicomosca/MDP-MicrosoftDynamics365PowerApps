@@ -52,6 +52,9 @@ namespace FM.PAP.ATTENDANCE
                                                 <fetch returntotalrecordcount=""true"">
                                                   <entity name=""res_attendance"">
                                                     <attribute name=""res_participationmode"" />
+                                                    <attribute name=""res_code"" />
+                                                    <attribute name=""res_startingtime"" />
+                                                    <attribute name=""res_endingtime"" />
                                                     <filter>
                                                       <condition attribute=""statecode"" operator=""eq"" value=""0"" />
                                                       <condition attribute=""res_classroombooking"" operator=""eq"" value=""{erLesson.Id}"" />
@@ -130,10 +133,10 @@ namespace FM.PAP.ATTENDANCE
                     string attendanceStartingTimeString = target.GetAttributeValue<string>("res_startingtime") ?? null;
                     string attendanceEndingTimeString = target.GetAttributeValue<string>("res_endingtime") ?? null;
 
-                    if (!Utils.IsInRange(intendedStartingTimeString, intendedEndingTimeString, attendanceStartingTimeString)) 
-                        throw new ApplicationException("L'ora di inizio della presenza non pu\u00F2 cadere fuori dall'orario della lezione.");                    
-                    
-                    if (!Utils.IsInRange(intendedStartingTimeString, intendedEndingTimeString, attendanceEndingTimeString)) 
+                    if (!Utils.IsInRange(intendedStartingTimeString, intendedEndingTimeString, attendanceStartingTimeString))
+                        throw new ApplicationException("L'ora di inizio della presenza non pu\u00F2 cadere fuori dall'orario della lezione.");
+
+                    if (!Utils.IsInRange(intendedStartingTimeString, intendedEndingTimeString, attendanceEndingTimeString))
                         throw new ApplicationException("L'ora di fine della presenza non pu\u00F2 cadere fuori dall'orario della lezione.");
 
                     if (Utils.StringTimeToInt(attendanceStartingTimeString) > Utils.StringTimeToInt(attendanceEndingTimeString))
@@ -141,7 +144,37 @@ namespace FM.PAP.ATTENDANCE
 
                     #endregion
 
-                    #region CONTROLLO CHE NON CI SIANO DUE PRESENZE CON LO STESSO CODICE
+                    #region CONTROLLO CHE NON CI SIANO DUE PRESENZE CON LO STESSO CODICE E STESSE ORA INIZIO OD ORA FINE
+
+                    if (attendances.Entities.Count > 0)
+                    {
+                        string targetCode = target.GetAttributeValue<string>("res_code") ?? null;
+
+                        foreach (Entity entity in attendances.Entities)
+                        {
+                            string entityCode = entity.GetAttributeValue<string>("res_code") ?? null;
+
+                            string entityStartingTimeString = entity.GetAttributeValue<string>("res_startingtime") ?? null;
+                            string entityEndingTimeString = entity.GetAttributeValue<string>("res_endingtime") ?? null;
+
+                            int entityStartingTime = Utils.StringTimeToInt(entityStartingTimeString);
+                            int entityEndingTime = Utils.StringTimeToInt(entityEndingTimeString);
+
+
+                            if (entityCode != null)
+                            {
+                                if (entityCode == targetCode)
+                                {
+                                    if (entityStartingTime == Utils.StringTimeToInt(attendanceStartingTimeString) ||
+                                        entityEndingTime == Utils.StringTimeToInt(attendanceEndingTimeString))
+                                    {
+                                        throw new ApplicationException("Non possono esistere due presenze dello stesso iscritto con gli stessi orari");
+                                    }
+                                }
+                            }
+                        }
+
+                    }
                     #endregion
                 }
                 catch (FaultException<OrganizationServiceFault> ex)
