@@ -65,11 +65,11 @@ if (typeof (FM.PAP.ATTENDANCE) == "undefined") {
         var formContext = executionContext.getFormContext();
     };
 
-    _self.fillLessonRelatedFields = function(executionContext, switchh) {
+    _self.fillLessonRelatedFields = function(executionContext, flag) {
         const formContext = executionContext.getFormContext();
         let date, startingTime, endingTime;
 
-        if (!switchh) return;
+        if (!flag) return;
 
         const lessonField = formContext.getAttribute(fields.lesson);
         const lessonId = lessonField.getValue() ? lessonField.getValue()[0].id : null;
