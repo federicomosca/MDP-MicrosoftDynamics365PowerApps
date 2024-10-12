@@ -1,15 +1,15 @@
-//sostituire PROGETTO con nome progetto
-//sostituire ENTITY con nome entità
+ï»¿//sostituire PROGETTO con nome progetto
+//sostituire ENTITY con nome entitÃ 
 if (typeof (FM) == "undefined") {
     FM = {};
 }
 
-if (typeof (FM.PROGETTO) == "undefined") {
-    FM.PROGETTO = {};
+if (typeof (FM.MDP) == "undefined") {
+    FM.MDP = {};
 }
 
-if (typeof (FM.PROGETTO.ENTITY) == "undefined") {
-    FM.PROGETTO.ENTITY = {};
+if (typeof (FM.MDP.CLASSROOM) == "undefined") {
+    FM.MDP.CLASSROOM = {};
 }
 
 (function () {
@@ -18,12 +18,14 @@ if (typeof (FM.PROGETTO.ENTITY) == "undefined") {
     //Form model
     _self.formModel = {
         entity: {
-            ///costanti entità
+            ///costanti entitÃ 
             logicalName: "account", // esempio logical Name
             displayName: "Organizzazione", // esempio display Name
         },
         fields: {
-
+            name: "res_name",
+            type: "res_type",
+            seats: "res_seats"
         },
         tabs: {
 
@@ -33,17 +35,16 @@ if (typeof (FM.PROGETTO.ENTITY) == "undefined") {
         }
     };
 
+    const fields = _self.formModel.fields;
+
     /*
     Esempio di stringa interpolata
     */
     _self._interpolateString = `${null} example`;
 
-   
-
-   
 
     /*
-    Utilizzare la keyword async se si utilizza uno o più metodi await dentro la funzione onSaveForm
+    Utilizzare la keyword async se si utilizza uno o piÃ¹ metodi await dentro la funzione onSaveForm
     per rendere il salvataggio asincrono (da attivare sull'app dynamics!)
     */
     _self.onSaveForm = function (executionContext) {
@@ -64,19 +65,13 @@ if (typeof (FM.PROGETTO.ENTITY) == "undefined") {
         var formContext = executionContext.getFormContext();
     };
     //---------------------------------------------------
-    _self.onLoadReadyOnlyForm = function (executionContext) {
 
-        var formContext = executionContext.getFormContext();
-    };
-    //---------------------------------------------------
     /* 
-    Utilizzare la keyword async se si utilizza uno o più metodi await dentro la funzione l'onLoadForm
+    Utilizzare la keyword async se si utilizza uno o piÃ¹ metodi await dentro la funzione l'onLoadForm
     per rendere l'onload asincrono asincrono (da attivare sull'app dynamics!)
     Ricordare di aggiungere la keyword anche ai metodi richiamati dall'onLoadForm se l'await avviene dentro di essi
     */
     _self.onLoadForm = async function (executionContext) {
-
-       
 
         //init formContext
         var formContext = executionContext.getFormContext();
@@ -84,22 +79,16 @@ if (typeof (FM.PROGETTO.ENTITY) == "undefined") {
         //Init event
         formContext.data.entity.addOnSave(_self.onSaveForm);
 
-        //Init function
+        //Init function 
 
         switch (formContext.ui.getFormType()) {
-            case FM.Global.CRM_FORM_TYPE_CREATE:
+            case 1:
                 _self.onLoadCreateForm(executionContext);
                 break;
-            case FM.Global.CRM_FORM_TYPE_UPDATE:
+            case 2:
                 _self.onLoadUpdateForm(executionContext);
-                break;
-            case FM.Global.CRM_FORM_TYPE_READONLY:
-                _self.onLoadReadyOnlyForm(executionContext);
-                break;
-            case FM.Global.CRM_FORM_TYPE_QUICKCREATE:
-                _self.onLoadCreateForm(executionContext);
                 break;
         }
     }
 }
-).call(FM.PROGETTO.ENTITY);
+).call(FM.MDP.CLASSROOM)

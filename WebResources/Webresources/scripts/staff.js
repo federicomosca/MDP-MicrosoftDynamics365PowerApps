@@ -5,12 +5,12 @@ if (typeof (
     FM = {};
 }
 
-if (typeof (FM.PAP) == "undefined") {
-    FM.PAP = {};
+if (typeof (FM.MDP) == "undefined") {
+    FM.MDP = {};
 }
 
-if (typeof (FM.PAP.STAFF) == "undefined") {
-    FM.PAP.STAFF = {};
+if (typeof (FM.MDP.STAFF) == "undefined") {
+    FM.MDP.STAFF = {};
 }
 
 (function () {
@@ -187,4 +187,4 @@ if (typeof (FM.PAP.STAFF) == "undefined") {
         }
     }
 }
-).call(FM.PAP.STAFF)
+).call(FM.MDP.STAFF)

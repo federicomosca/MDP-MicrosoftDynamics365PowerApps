@@ -1,5 +1,5 @@
-﻿using FM.PAP.CLIENTACTION;
-using FM.PAP.UTILS;
+﻿using FM.MDP.CLIENTACTION;
+using FM.MDP.UTILS;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
 using Newtonsoft.Json;
@@ -10,7 +10,7 @@ using System.ServiceModel;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace FM.PAP.LESSON
+namespace FM.MDP.LESSON
 {
     public class PostUpdate : IPlugin
     {

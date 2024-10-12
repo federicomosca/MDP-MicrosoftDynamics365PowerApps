@@ -15,11 +15,11 @@ using System.ServiceModel;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
-using static FM.PAP.CLIENTACTION.ClientAction;
+using static FM.MDP.CLIENTACTION.ClientAction;
 using System.Runtime.Remoting.Contexts;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace FM.PAP.CLIENTACTION
+namespace FM.MDP.CLIENTACTION
 {
     public class ClientAction : IPlugin
     {

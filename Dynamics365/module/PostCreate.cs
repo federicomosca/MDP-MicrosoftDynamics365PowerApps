@@ -7,7 +7,7 @@ using System.ServiceModel;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace FM.PAP.MODULE
+namespace FM.MDP.MODULE
 {
     public class PostCreate : IPlugin
     {

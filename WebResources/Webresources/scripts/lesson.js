@@ -4,12 +4,12 @@ if (typeof (FM) == "undefined") {
     FM = {};
 }
 
-if (typeof (FM.PAP) == "undefined") {
-    FM.PAP = {};
+if (typeof (FM.MDP) == "undefined") {
+    FM.MDP = {};
 }
 
-if (typeof (FM.PAP.LESSON) == "undefined") {
-    FM.PAP.LESSON = {};
+if (typeof (FM.MDP.LESSON) == "undefined") {
+    FM.MDP.LESSON = {};
 }
 
 (function () {
@@ -470,7 +470,7 @@ if (typeof (FM.PAP.LESSON) == "undefined") {
     */
     _self.onLoadForm = async function (executionContext) {
 
-        await import('../res_scripts/Utils.js');
+        await import('../res_scripts/utils.js');
 
         //init formContext
         var formContext = executionContext.getFormContext();
@@ -504,4 +504,4 @@ if (typeof (FM.PAP.LESSON) == "undefined") {
         }
     }
 }
-).call(FM.PAP.LESSON);
+).call(FM.MDP.LESSON);

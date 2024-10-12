@@ -14,7 +14,7 @@
     <OutputType>Library</OutputType>
     <RootNamespace>WebResources</RootNamespace>
     <AssemblyName>WebResources</AssemblyName>
-    <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <MyType>Custom</MyType>
     <UseIISExpress>true</UseIISExpress>
     <Use64BitIISExpress />
@@ -25,6 +25,7 @@
     <UseGlobalApplicationHostFile />
     <NuGetPackageImportStamp>
     </NuGetPackageImportStamp>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -108,15 +109,14 @@
     <Content Include="DataModel\res_subscription.js" />
     <Content Include="DataModel\res_teachingroom.js" />
     <Content Include="Web.config" />
-    <Content Include="Webresources\scripts\crmAttendance.js" />
-    <Content Include="Webresources\scripts\crmLesson.js" />
-    <Content Include="Webresources\scripts\crmClassroom.js" />
-    <Content Include="Webresources\scripts\crmContact.js" />
-    <Content Include="Webresources\scripts\crmStaff.js" />
-    <Content Include="Webresources\scripts\crmCourse.js" />
-    <Content Include="Webresources\scripts\crmModule.js" />
-    <Content Include="Webresources\scripts\Utils.js" />
-    <Content Include="Webresources\scripts\res_templates\template.js" />
+    <Content Include="Webresources\scripts\attendance.js" />
+    <Content Include="Webresources\scripts\lesson.js" />
+    <Content Include="Webresources\scripts\classroom.js" />
+    <Content Include="Webresources\scripts\contact.js" />
+    <Content Include="Webresources\scripts\staff.js" />
+    <Content Include="Webresources\scripts\course.js" />
+    <Content Include="Webresources\scripts\module.js" />
+    <Content Include="Webresources\scripts\utils.js" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="My Project\AssemblyInfo.vb" />
@@ -167,7 +167,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Webresources\pages\" />
-    <Folder Include="Webresources\scripts\res_libraries\" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>

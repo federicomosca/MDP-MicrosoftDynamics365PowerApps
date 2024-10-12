@@ -1,5 +1,5 @@
-﻿using FM.PAP.LESSON;
-using FM.PAP.UTILS;
+﻿using FM.MDP.LESSON;
+using FM.MDP.UTILS;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
 using System;
@@ -10,7 +10,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Security.Policy;
 
-namespace FM.PAP.ATTENDANCE
+namespace FM.MDP.ATTENDANCE
 {
     public class PostCreate : IPlugin
     {

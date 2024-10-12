@@ -1,5 +1,5 @@
-﻿using FM.PAP.LESSON;
-using FM.PAP.UTILS;
+﻿using FM.MDP.LESSON;
+using FM.MDP.UTILS;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
 using System;
@@ -9,7 +9,7 @@ using System.ServiceModel;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace FM.PAP.LESSON
+namespace FM.MDP.LESSON
 {
     public class PreCreate : IPlugin
     {

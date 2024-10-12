@@ -1,4 +1,8 @@
-﻿const toLocalISOString = date => {
+﻿
+const CREATE_FORM = 1;
+const UPDATE_FORM = 2;
+
+const toLocalISOString = date => {
     const pad = (n) => (n < 10 ? '0' + n : n);
     return date.getFullYear() + '-' +
         pad(date.getMonth() + 1) + '-' +

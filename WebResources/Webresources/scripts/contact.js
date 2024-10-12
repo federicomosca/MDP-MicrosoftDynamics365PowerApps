@@ -4,12 +4,12 @@ if (typeof (FM) == "undefined") {
     FM = {};
 }
 
-if (typeof (FM.PAP) == "undefined") {
-    FM.PAP = {};
+if (typeof (FM.MDP) == "undefined") {
+    FM.MDP = {};
 }
 
-if (typeof (FM.PAP.CLASSROOM) == "undefined") {
-    FM.PAP.CLASSROOM = {};
+if (typeof (FM.MDP.CONTACT) == "undefined") {
+    FM.MDP.CONTACT = {};
 }
 
 (function () {
@@ -23,9 +23,11 @@ if (typeof (FM.PAP.CLASSROOM) == "undefined") {
             displayName: "Organizzazione", // esempio display Name
         },
         fields: {
-            name: "res_name",
-            type: "res_type",
-            seats: "res_seats"
+            firstName: "firstname",
+            lastName: "lastname",
+            account: "parentcustomerid",
+            email: "emailaddress1",
+            governmentId: "governmentid"
         },
         tabs: {
 
@@ -66,6 +68,31 @@ if (typeof (FM.PAP.CLASSROOM) == "undefined") {
     };
     //---------------------------------------------------
 
+    //_self.checkAccountName = function (executionContext) {
+    //    var formContext = executionContext.getFormContext();
+
+    //    let accountField = formContext.getAttribute(fields.account);
+    //    let accountId = accountField && accountField.getValue() ? (accountField.getValue()[0].id).replace(/[{}]/g, "") : null;
+    //    if (accountId) {
+    //        Xrm.WebApi.retrieveRecord("account", accountId, "?$select=name").then(
+    //            function success(account) {
+
+    //                let splitName = account.name ? account.name.split(" ") : "";
+
+    //                if (splitName) {
+    //                    formContext.getAttribute(fields.firstName) ? formContext.getAttribute(fields.firstName).setValue(`${splitName[0]}`) : null;
+    //                    formContext.getAttribute(fields.lastName) ? formContext.getAttribute(fields.lastName).setValue(`${splitName[1]}`) : null;
+    //                }
+
+    //            },
+    //            function error(error) {
+    //                console.log(error.message);
+    //            }
+    //        );
+    //    }
+    ////};
+    //---------------------------------------------------
+
     /* 
     Utilizzare la keyword async se si utilizza uno o più metodi await dentro la funzione l'onLoadForm
     per rendere l'onload asincrono asincrono (da attivare sull'app dynamics!)
@@ -78,6 +105,8 @@ if (typeof (FM.PAP.CLASSROOM) == "undefined") {
 
         //Init event
         formContext.data.entity.addOnSave(_self.onSaveForm);
+        //formContext.getAttribute(fields.account).addOnChange(_self.checkAccountName);
+        //_self.checkAccountName(executionContext);
 
         //Init function 
 
@@ -91,4 +120,4 @@ if (typeof (FM.PAP.CLASSROOM) == "undefined") {
         }
     }
 }
-).call(FM.PAP.CLASSROOM)
+).call(FM.MDP.CONTACT)

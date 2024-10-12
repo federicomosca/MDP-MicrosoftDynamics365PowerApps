@@ -1,5 +1,5 @@
-﻿using FM.PAP.LESSON;
-using FM.PAP.UTILS;
+﻿using FM.MDP.LESSON;
+using FM.MDP.UTILS;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
 using Newtonsoft.Json;
@@ -13,7 +13,7 @@ using System.ServiceModel;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace FM.PAP.ATTENDANCE
+namespace FM.MDP.ATTENDANCE
 {
     public class PreCreate : IPlugin
     {
